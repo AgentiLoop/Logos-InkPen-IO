@@ -4,3 +4,4 @@ build/
 *.xcuserstate
 /.build
 *.dmg
+.agent/
