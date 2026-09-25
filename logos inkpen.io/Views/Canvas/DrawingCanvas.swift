@@ -205,8 +205,9 @@ struct DrawingCanvas: View {
                     rebuildLockedObjectsCache()
                     hasSpatialIndexInitialized = true
                     MemoryDiag.report("DrawingCanvas.onAppear END", document: document)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak document] in
-                        guard let document else { return }
+                    let diagDocument = document
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak diagDocument] in
+                        guard let document = diagDocument else { return }
                         MemoryDiag.checkpoint("DrawingCanvas +2s (after SwiftUI layout)")
                         MemoryDiag.report("DrawingCanvas +2s", document: document)
                     }
