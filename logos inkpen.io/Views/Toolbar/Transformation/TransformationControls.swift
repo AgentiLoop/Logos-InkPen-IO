@@ -375,7 +375,7 @@ struct TransformationControls: View {
     }
 
     private func updatePositionOnly() {
-        let bounds = document.cachedSelectionBounds ?? getSelectionBounds()
+        let bounds = document.dragSession.cachedSelectionBounds ?? getSelectionBounds()
         guard let bounds = bounds else {
             xValue = ""
             yValue = ""

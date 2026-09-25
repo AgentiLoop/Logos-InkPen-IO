@@ -270,7 +270,7 @@ extension DrawingCanvas {
             }
         }
         if !layer.objectIDs.isEmpty && layer.isVisible {
-            let isActiveLayer = document.activeLayerIndexDuringDrag == nil || document.activeLayerIndexDuringDrag == layerIndex
+            let isActiveLayer = document.dragSession.activeLayerIndex == nil || document.dragSession.activeLayerIndex == layerIndex
             let layerObjectIDsSet = Set(layer.objectIDs)
             let selectedInThisLayer = document.viewState.selectedObjectIDs.intersection(layerObjectIDsSet)
             let selectedRectShape = getSelectedRectangleShape()

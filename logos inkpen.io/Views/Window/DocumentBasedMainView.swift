@@ -101,8 +101,8 @@ struct DocumentBasedMainView: View {
         }
         .onDisappear {
             documentState.cleanup()
-            document.imageStorage.removeAll()
-            document.lastDrawnImageHash.removeAll()
+            document.imageCache.images.removeAll()
+            document.imageCache.lastDrawnHash.removeAll()
             document.snapshot.objects.removeAll()
             document.snapshot.layers.removeAll()
             document.commandManager.clear()

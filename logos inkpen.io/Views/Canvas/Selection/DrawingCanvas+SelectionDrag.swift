@@ -198,9 +198,9 @@ extension DrawingCanvas {
         }
         currentDragDelta = canvasDelta
         liveDragOffset = canvasDelta
-        if document.activeLayerIndexDuringDrag == nil, let firstSelected = document.viewState.selectedObjectIDs.first {
+        if document.dragSession.activeLayerIndex == nil, let firstSelected = document.viewState.selectedObjectIDs.first {
             if let obj = document.findObject(by: firstSelected) {
-                document.activeLayerIndexDuringDrag = obj.layerIndex
+                document.dragSession.activeLayerIndex = obj.layerIndex
                 for layer in document.snapshot.layers {
                     if layer.opacity == 1.0 {
                         layerPreviewOpacities[layer.id] = 0.9999999999
@@ -219,7 +219,7 @@ extension DrawingCanvas {
             liveDragOffset = .zero
             cachedSelectionBoundsForDrag = nil
             shiftConstraintAxis = .none
-            document.activeLayerIndexDuringDrag = nil
+            document.dragSession.activeLayerIndex = nil
             layerPreviewOpacities.removeAll()
             return
         }
@@ -229,10 +229,10 @@ extension DrawingCanvas {
             let finalDelta = currentDragDelta
             liveDragOffset = .zero
             cachedSelectionBoundsForDrag = nil
-            document.currentDragOffset = .zero
-            document.dragPreviewCoordinates = .zero
-            document.cachedSelectionBounds = nil
-            document.activeLayerIndexDuringDrag = nil
+            document.dragSession.currentDragOffset = .zero
+            document.dragSession.dragPreviewCoordinates = .zero
+            document.dragSession.cachedSelectionBounds = nil
+            document.dragSession.activeLayerIndex = nil
             layerPreviewOpacities.removeAll()
             var oldShapes: [UUID: VectorShape] = [:]
             var affectedObjectIDs: Set<UUID> = []
@@ -343,7 +343,7 @@ extension DrawingCanvas {
         } else {
             liveDragOffset = .zero
             cachedSelectionBoundsForDrag = nil
-            document.cachedSelectionBounds = nil
+            document.dragSession.cachedSelectionBounds = nil
         }
     }
 

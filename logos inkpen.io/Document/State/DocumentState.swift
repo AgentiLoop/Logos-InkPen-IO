@@ -85,7 +85,7 @@ class DocumentState: ObservableObject {
             for id in docShapeIDs {
                 SVGToInkPenImporter.svgShapeRegistry.removeValue(forKey: id)
             }
-            doc.imageStorage.removeAll()
+            doc.imageCache.images.removeAll()
         }
         MemoryDiag.checkpoint("DocumentState.cleanup")
         document = nil

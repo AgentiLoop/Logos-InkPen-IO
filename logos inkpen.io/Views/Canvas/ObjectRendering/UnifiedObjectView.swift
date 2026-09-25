@@ -1137,7 +1137,7 @@ struct LayerCanvasView: View {
         }
 
         let image: CGImage
-        if let cachedImage = document.imageStorage[shape.id] {
+        if let cachedImage = document.imageCache.images[shape.id] {
             image = cachedImage
         } else {
             let sourceCGImage: CGImage?
@@ -1195,14 +1195,14 @@ struct LayerCanvasView: View {
             } else {
                 finalImage = cgImage
             }
-            document.imageStorage[shape.id] = finalImage
+            document.imageCache.images[shape.id] = finalImage
             image = finalImage
         }
         let imageHash = ObjectIdentifier(image).hashValue
-        let lastHash = document.lastDrawnImageHash[shape.id]
+        let lastHash = document.imageCache.lastDrawnHash[shape.id]
         if lastHash == imageHash {
         } else {
-            document.lastDrawnImageHash[shape.id] = imageHash
+            document.imageCache.lastDrawnHash[shape.id] = imageHash
         }
         context.withCGContext { cgContext in
             cgContext.saveGState()

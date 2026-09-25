@@ -24,9 +24,7 @@ final class VectorDocument: ObservableObject, Codable {
             settings.customHsbSwatches = colorSwatches.hsb
         }
     }
-    var processedLayersDuringDrag: Set<Int> = []
-    var processedObjectsDuringDrag: Set<UUID> = []
-    var activeLayerIndexDuringDrag: Int? = nil
+    var dragSession = DocumentDragSession()
     var isHandleScalingActive = false
 
     let changeNotifier = DocumentChangeNotifier()
@@ -34,9 +32,6 @@ final class VectorDocument: ObservableObject, Codable {
     private var cancellables = Set<AnyCancellable>()
 
     var textPreviewTypography: [UUID: TypographyProperties] = [:]
-    var currentDragOffset: CGPoint = .zero
-    var cachedSelectionBounds: CGRect? = nil
-    var dragPreviewCoordinates: CGPoint = .zero
 
     enum FreehandFillMode: String, CaseIterable {
         case fill = "Fill"
@@ -52,9 +47,7 @@ final class VectorDocument: ObservableObject, Codable {
         manager.document = self
         return manager
     }()
-    internal var imageStorage: [UUID: CGImage] = [:]
-    internal var baseDirectoryURL: URL? = nil
-    internal var lastDrawnImageHash: [UUID: Int] = [:]
+    internal var imageCache = DocumentImageCache()
 
     @Published var fontManager: FontManager = FontManager()
     @Published var strokeDefaults: StrokeDefaults = .default {
@@ -65,7 +58,7 @@ final class VectorDocument: ObservableObject, Codable {
     var originalHandlePositions: [String: VectorPoint] = [:]
 
     deinit {
-        imageStorage.removeAll()
+        imageCache.removeAll()
     }
 
     init(settings: DocumentSettings = DocumentSettings()) {
@@ -144,9 +137,7 @@ final class VectorDocument: ObservableObject, Codable {
         viewState.shearAnchor = .center
         viewState.transformOrigin = .center
         viewState.objectPositionUpdateTrigger = false
-        currentDragOffset = .zero
-        cachedSelectionBounds = nil
-        dragPreviewCoordinates = .zero
+        dragSession = DocumentDragSession()
         viewState.warpEnvelopeCorners = [:]
         viewState.warpBounds = [:]
         viewState.viewMode = .color
@@ -275,8 +266,7 @@ final class VectorDocument: ObservableObject, Codable {
     }
 
     func regenerateAllImages() {
-        imageStorage.removeAll()
-        lastDrawnImageHash.removeAll()
+        imageCache.removeAll()
         objectWillChange.send()
     }
 }

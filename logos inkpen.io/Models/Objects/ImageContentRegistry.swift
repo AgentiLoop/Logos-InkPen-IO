@@ -29,20 +29,20 @@ enum ImageContentRegistry {
     }
 
     static func register(image: CGImage, for shapeID: UUID, in document: VectorDocument) {
-        document.imageStorage[shapeID] = image
+        document.imageCache.images[shapeID] = image
     }
 
     static func image(for shapeID: UUID, in document: VectorDocument) -> CGImage? {
-        return document.imageStorage[shapeID]
+        return document.imageCache.images[shapeID]
     }
 
     static func containsImage(_ shape: VectorShape, in document: VectorDocument) -> Bool {
-        return document.imageStorage[shape.id] != nil
+        return document.imageCache.images[shape.id] != nil
     }
 
     @discardableResult
     static func hydrateImageIfAvailable(for shape: VectorShape, in document: VectorDocument) -> CGImage? {
-        if let existing = document.imageStorage[shape.id] {
+        if let existing = document.imageCache.images[shape.id] {
             return existing
         }
         var loadedCGImage: CGImage? = nil
@@ -83,32 +83,32 @@ enum ImageContentRegistry {
             }
         }
         if let cgImage = loadedCGImage {
-            document.imageStorage[shape.id] = cgImage
+            document.imageCache.images[shape.id] = cgImage
             return cgImage
         }
         return nil
     }
 
     static func setBaseDirectory(_ url: URL?, for document: VectorDocument) {
-        document.baseDirectoryURL = url
+        document.imageCache.baseDirectoryURL = url
     }
 
     static func remove(for shapeID: UUID, in document: VectorDocument) {
-        document.imageStorage.removeValue(forKey: shapeID)
+        document.imageCache.images.removeValue(forKey: shapeID)
     }
 
     static func cleanup(keepingShapes shapeIDs: Set<UUID>, in document: VectorDocument) {
-        let keysToRemove = document.imageStorage.keys.filter { !shapeIDs.contains($0) }
+        let keysToRemove = document.imageCache.images.keys.filter { !shapeIDs.contains($0) }
         for key in keysToRemove {
-            document.imageStorage.removeValue(forKey: key)
+            document.imageCache.images.removeValue(forKey: key)
         }
     }
 
     static func clearAll(in document: VectorDocument) {
-        document.imageStorage.removeAll()
+        document.imageCache.images.removeAll()
     }
 
     static func storageSize(in document: VectorDocument) -> Int {
-        return document.imageStorage.count
+        return document.imageCache.images.count
     }
 }

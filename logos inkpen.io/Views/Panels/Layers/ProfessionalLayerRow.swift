@@ -124,15 +124,15 @@ struct ProfessionalLayerRow: View {
                             .onChanged { _ in
                                 if !document.viewState.isDraggingVisibility {
                                     document.viewState.isDraggingVisibility = true
-                                    document.processedLayersDuringDrag.removeAll()
+                                    document.dragSession.processedLayers.removeAll()
                                     document.snapshot.layers[layerIndex].isVisible.toggle()
-                                    document.processedLayersDuringDrag.insert(layerIndex)
+                                    document.dragSession.processedLayers.insert(layerIndex)
                                     document.changeNotifier.notifyLayersChanged()
                                 }
                             }
                             .onEnded { _ in
                                 document.viewState.isDraggingVisibility = false
-                                document.processedLayersDuringDrag.removeAll()
+                                document.dragSession.processedLayers.removeAll()
                             }
                     )
                     Button(action: {
@@ -150,15 +150,15 @@ struct ProfessionalLayerRow: View {
                             .onChanged { _ in
                                 if !document.viewState.isDraggingLock {
                                     document.viewState.isDraggingLock = true
-                                    document.processedLayersDuringDrag.removeAll()
+                                    document.dragSession.processedLayers.removeAll()
                                     document.snapshot.layers[layerIndex].isLocked.toggle()
-                                    document.processedLayersDuringDrag.insert(layerIndex)
+                                    document.dragSession.processedLayers.insert(layerIndex)
                                     document.changeNotifier.notifyLayersChanged()
                                 }
                             }
                             .onEnded { _ in
                                 document.viewState.isDraggingLock = false
-                                document.processedLayersDuringDrag.removeAll()
+                                document.dragSession.processedLayers.removeAll()
                             }
                     )
                     HStack(spacing: 4) {
