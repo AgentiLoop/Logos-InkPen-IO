@@ -192,6 +192,29 @@ Native FreeHand import (FH3 through FH11 & MX) — opened directly, no intermedi
 
 ---
 
+## 🗺️ Source Layout
+
+All app code lives in `logos inkpen.io/` (an Xcode synchronized folder — add or move files on disk and Xcode picks them up).
+
+| Folder | What lives there |
+|--------|------------------|
+| `App/` | `@main` app + menus (`LogosInkPenApp.swift`), `AppDelegate`, global key handling, app-wide state & settings, `Clipboard/`, `Help/`, `Diagnostics/` (logging, stderr filter) |
+| `Document/` | `InkpenDocument` (FileDocument), `DocumentState`, registries, snapshots, `Settings/`, `Migration/`, `Selection/` |
+| `Document/VectorDocument/` | The core `VectorDocument` class and its extensions, grouped into `Layers/`, `Objects/`, `PathOperations/`, `TextAndColor/`, `Unified/` |
+| `Models/` | Plain data types: `Objects/` (shapes, paths, layers), `Text/`, `Color/`, `Gradient/`, `Handles/`, `Tools/`, `Transform/`, `Interface/` |
+| `Geometry/` | Pure math: `Bezier/`, `Path/` (boolean ops, path utilities), `Shapes/`, `Math/` |
+| `FileFormats/` | `FileOperations` + `Native/` (.inkpen JSON), `Import/`, `Export/`, `PDF/`, `SVG/`, `FreeHand/`, `PNG/` |
+| `Rendering/` | `Metal/` compute & tile rendering, `SpatialIndex/`, image tile cache |
+| `Undo/` | `CommandManager` and all undoable `Commands/` |
+| `Input/` | Pressure / stylus handling |
+| `Views/Canvas/` | `DrawingCanvas` and its extensions: `Gestures/`, `Selection/`, `Tools/`, `ObjectRendering/`, `Handles/`, `Overlays/`, `Text/` |
+| `Views/Panels/` | Right-side inspector: `Color/`, `Gradient/`, `Layers/`, `PathOperations/`, `StrokeFill/`, `Typography/` |
+| `Views/…` | `Window/` (main window, rulers, status bar), `Toolbar/`, `Dialogs/`, `Preferences/`, `Components/`, `Styles/` |
+| `Utilities/` | Small cross-cutting `Extensions/` and the SF Symbols library |
+| `ThirdParty/` | libfreehand / librevenge (bridged via `logos inkpen.io-Bridging-Header.h`) |
+
+---
+
 ## 💻 System Requirements
 
 - macOS (SwiftUI-based)
