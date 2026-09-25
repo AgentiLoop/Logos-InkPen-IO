@@ -382,7 +382,7 @@ struct logos_inken_ioApp: App {
                     Button(action: { appState.selectedPanelTab = .gradient }) {
                         Label("Grade", systemImage: PanelTab.gradient.iconName)
                     }
-                    .keyboardShortcut("g", modifiers: [.command, .shift])
+                    .keyboardShortcut("g", modifiers: [.command, .control])
                     Button(action: { appState.selectedPanelTab = .color }) {
                         Label("Ink", systemImage: PanelTab.color.iconName)
                     }
@@ -390,11 +390,11 @@ struct logos_inken_ioApp: App {
                     Button(action: { appState.selectedPanelTab = .pathOps }) {
                         Label("Path", systemImage: PanelTab.pathOps.iconName)
                     }
-                    .keyboardShortcut("o", modifiers: [.command, .shift])
+                    .keyboardShortcut("o", modifiers: [.command, .control])
                     Button(action: { appState.selectedPanelTab = .font }) {
                         Label("Font", systemImage: PanelTab.font.iconName)
                     }
-                    .keyboardShortcut("f", modifiers: [.command, .shift])
+                    .keyboardShortcut("f", modifiers: [.command, .control])
                 }
                 CommandGroup(replacing: .sidebar) {
                     Button("Zoom In") {
@@ -640,12 +640,12 @@ struct logos_inken_ioApp: App {
                     Button("Isosceles Triangle Tool") {
                         documentState?.switchToTool(.isoscelesTriangle)
                     }
-                    .keyboardShortcut("i", modifiers: [])
+                    .keyboardShortcut("i", modifiers: [.shift])
                     .help("Switch to isosceles triangle tool")
                     Button("Right Triangle Tool") {
                         documentState?.switchToTool(.rightTriangle)
                     }
-                    .keyboardShortcut("r", modifiers: [.shift, .option])
+                    .keyboardShortcut("t", modifiers: [.shift, .option])
                     .help("Switch to right triangle tool")
                     Button("Acute Triangle Tool") {
                         documentState?.switchToTool(.acuteTriangle)

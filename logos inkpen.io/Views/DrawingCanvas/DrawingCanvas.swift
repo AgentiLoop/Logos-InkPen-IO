@@ -107,7 +107,7 @@ struct DrawingCanvas: View {
     @State internal var selectBehindIndex: Int = 0
     @State internal var selectBehindLocation: CGPoint = .zero
     @State internal var dragStartGradient: VectorGradient? = nil
-    @State internal var doubleClickTimeout: TimeInterval = 0.3
+    @State internal var doubleClickTimeout: TimeInterval = NSEvent.doubleClickInterval
     @State internal var isTextEditingMode = false
     @State internal var zoomToolDragStartPoint: CGPoint = .zero
     @State internal var zoomToolInitialZoomLevel: CGFloat = 1.0

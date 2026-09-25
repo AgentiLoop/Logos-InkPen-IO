@@ -267,8 +267,7 @@ extension DrawingCanvas {
                     if shape.name == "Canvas Background" || shape.name == "Pasteboard Background" {
                         continue
                     }
-                    let transformedBounds = shape.bounds.applying(shape.transform)
-                    if transformedBounds.contains(location) {
+                    if performShapeHitTest(shape: shape, at: location) {
                         tappedObject = object
                         tappedShape = shape
                         break
