@@ -404,6 +404,13 @@ extension DrawingCanvas {
             .onChange(of: document.viewState.currentTool) { oldTool, newTool in
                 handleToolChange(oldTool: oldTool, newTool: newTool)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .penToolEndPathRequested)) { notification in
+                // Return / Esc end the in-progress pen path (Illustrator convention).
+                guard (notification.object as? VectorDocument) === document,
+                      document.viewState.currentTool == .bezierPen,
+                      isBezierDrawing else { return }
+                finishBezierPath()
+            }
             .onHover { isHovering in
                 isCanvasHovering = isHovering
             }

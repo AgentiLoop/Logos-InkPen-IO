@@ -207,7 +207,33 @@ extension DrawingCanvas {
             }
         }
         let hitBounds = shape.bounds.applying(shape.transform)
-        return hitBounds.contains(location)
+        // Images, warps, clip groups, and compound containers keep box selection.
+        let usesBoxHitTest = shape.embeddedImageData != nil || shape.linkedImagePath != nil ||
+            shape.isWarpObject || shape.isClippingGroup || shape.isCompoundPath || shape.path.elements.isEmpty
+        if usesBoxHitTest {
+            return hitBounds.contains(location)
+        }
+        // Vector paths: hit the filled interior or near the stroke (Illustrator/Figma behavior)
+        // instead of anywhere in the bounding box, which let thin diagonal lines and open
+        // curves steal clicks meant for objects behind them.
+        var transform = shape.transform
+        guard let cgPath = shape.path.cgPath.copy(using: &transform) else {
+            return hitBounds.contains(location)
+        }
+        let isFilled: Bool = {
+            guard let fill = shape.fillStyle, fill.opacity > 0 else { return false }
+            if case .clear = fill.color { return false }
+            return true
+        }()
+        let strokeWidth = shape.strokeStyle.map { CGFloat($0.width) } ?? 0
+        return HitTestMath.hits(
+            path: cgPath,
+            point: location,
+            filled: isFilled,
+            fillRule: shape.path.fillRule.cgPathFillRule,
+            strokeWidth: strokeWidth,
+            tolerance: HitTestMath.canvasTolerance(zoom: CGFloat(zoomLevel))
+        )
     }
 
      internal func validateAndCorrectLocation(_ location: CGPoint) -> CGPoint {

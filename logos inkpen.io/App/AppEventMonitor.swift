@@ -1,6 +1,11 @@
 import SwiftUI
 import AppKit
 
+extension Notification.Name {
+    /// Posted (object: VectorDocument) when Return/Enter/Esc should end the pen path in progress.
+    static let penToolEndPathRequested = Notification.Name("penToolEndPathRequested")
+}
+
 final class AppEventMonitor {
     static let shared = AppEventMonitor()
 
@@ -12,12 +17,37 @@ final class AppEventMonitor {
 
     private init() {
         setupKeyEventMonitoring()
+        // If the app loses focus while Space/Cmd/an arrow is held (e.g. Cmd-Tab), the key-up or
+        // flags-changed event never arrives and the temporary tool / live nudge would stick.
+        NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.resetTransientKeyState()
+        }
     }
 
     func setActiveDocument(_ document: VectorDocument) {
         lock.lock()
         defer { lock.unlock() }
         activeDocument = document
+    }
+
+    private func resetTransientKeyState() {
+        lock.lock()
+        let activeDoc = activeDocument
+        lock.unlock()
+        isSpacebarPressed = false
+        if let doc = activeDoc {
+            if let previous = previousTool, temporaryTool != nil {
+                doc.viewState.currentTool = previous
+            }
+            if isNudging && accumulatedNudgeOffset != .zero {
+                doc.nudgeSelectedObjects(by: accumulatedNudgeOffset)
+            }
+            doc.viewState.liveNudgeOffset = .zero
+        }
+        temporaryTool = nil
+        previousTool = nil
+        accumulatedNudgeOffset = .zero
+        isNudging = false
     }
 
     private func setupKeyEventMonitoring() {
@@ -42,11 +72,22 @@ final class AppEventMonitor {
     private var lastNudgeTime: Date = Date.distantPast
     private var isNudging: Bool = false
 
+    private static let returnKeyCode: UInt16 = 36
+    private static let keypadEnterKeyCode: UInt16 = 76
+    private static let escapeKeyCode: UInt16 = 53
+
     private func handleKeyEvent(_ event: NSEvent, activeDoc: VectorDocument) -> NSEvent? {
         if let window = NSApp.keyWindow,
            let firstResponder = window.firstResponder,
            firstResponder is NSTextView {
             return event
+        }
+        if event.type == .keyDown,
+           activeDoc.viewState.currentTool == .bezierPen,
+           [Self.returnKeyCode, Self.keypadEnterKeyCode, Self.escapeKeyCode].contains(event.keyCode),
+           event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {
+            NotificationCenter.default.post(name: .penToolEndPathRequested, object: activeDoc)
+            return nil
         }
         if event.type == .keyDown,
            let characters = event.charactersIgnoringModifiers,
@@ -115,7 +156,8 @@ final class AppEventMonitor {
                 if !event.modifierFlags.contains(.control) &&
                    !event.modifierFlags.contains(.command) {
                     if activeDoc.viewState.selectedObjectIDs.isEmpty && activeDoc.viewState.selectedPoints.isEmpty {
-                        return nil
+                        // Nothing to nudge: let lists, steppers, etc. receive the arrow key.
+                        return event
                     }
                     var nudgeDirection: CGVector? = nil
                     switch characters {
@@ -138,17 +180,15 @@ final class AppEventMonitor {
                         }
                         lastNudgeTime = now
                         let gridSpacingInPoints = activeDoc.settings.gridSpacing * activeDoc.settings.unit.pointsPerUnit
-                        let multiplier: CGFloat
-                        if event.modifierFlags.contains(.shift) {
-                            multiplier = 10.0
-                        } else if event.modifierFlags.contains(.option) {
-                            multiplier = 0.1
-                        } else {
-                            multiplier = 1.0
-                        }
+                        let increment = NudgeMath.increment(
+                            gridSpacingInPoints: CGFloat(gridSpacingInPoints),
+                            snapToGrid: activeDoc.settings.snapToGrid,
+                            shift: event.modifierFlags.contains(.shift),
+                            option: event.modifierFlags.contains(.option)
+                        )
                         let nudgeAmount = CGVector(
-                            dx: direction.dx * gridSpacingInPoints * multiplier,
-                            dy: direction.dy * gridSpacingInPoints * multiplier
+                            dx: direction.dx * increment,
+                            dy: direction.dy * increment
                         )
                         accumulatedNudgeOffset.dx += nudgeAmount.dx
                         accumulatedNudgeOffset.dy += nudgeAmount.dy
