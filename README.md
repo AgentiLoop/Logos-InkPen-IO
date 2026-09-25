@@ -202,15 +202,16 @@ All app code lives in `logos inkpen.io/` (an Xcode synchronized folder — add o
 |--------|------------------|
 | `App/` | `Lifecycle/` (`@main` app + menus, `AppDelegate`, global key handling), `State/` (app-wide state & settings), `Support/` (bridging header), `Clipboard/`, `Help/`, `Diagnostics/` (logging, stderr filter) |
 | `Document/` | `Core/` (`InkpenDocument` FileDocument, snapshots, change notifier), `State/` (`DocumentState`, view state, registries), `Settings/`, `Migration/`, `Selection/` |
-| `Document/VectorDocument/` | `Core/` (the `VectorDocument` class, Codable, undo/redo, sync), `Canvas/` (canvas & zoom), `Layers/`, `Objects/`, `PathOperations/`, `TextAndColor/`, `Unified/` |
-| `Models/` | Plain data types: `Objects/` (shapes, paths, layers), `Text/`, `Color/`, `Gradient/`, `Handles/`, `Tools/`, `Transform/`, `Interface/` |
+| `Document/VectorDocument/` | `Core/` (the `VectorDocument` class, `DocumentDragSession`, `DocumentImageCache`, Codable, undo/redo, sync), `Canvas/` (canvas & zoom), `Layers/`, `Objects/`, `Color/`, `Unified/` |
+| `Features/` | Cross-layer features grouped together, split by role into (as needed) `Model/`, `Document/` (VectorDocument extensions), `Commands/` (undo), `Canvas/`, `Panel/`: `Text/`, `Gradient/`, `PathOperations/` |
+| `Models/` | Plain data types: `Objects/` (shapes, paths, layers), `Color/`, `Handles/`, `Tools/`, `Transform/`, `Interface/` |
 | `Geometry/` | Pure math: `Bezier/`, `Path/` (boolean ops, path utilities), `Shapes/`, `Math/` |
 | `FileFormats/` | `Core/` (`FileOperations`), `Native/` (.inkpen JSON), `Import/`, `Export/`, `PDF/`, `SVG/`, `FreeHand/`, `PNG/` |
 | `Rendering/` | `Metal/` compute & tile rendering, `SpatialIndex/`, `Tiles/` (image tile cache) |
 | `Undo/` | `Core/` (`Command`, `CommandManager`) and all undoable `Commands/` |
 | `Input/` | Pressure / stylus handling |
-| `Views/Canvas/` | `Core/` (`DrawingCanvas` + view composition), `CoordinateSystem/`, `Metal/`, `Helpers/`, `Gestures/`, `Selection/`, `Tools/`, `ObjectRendering/`, `Handles/`, `Overlays/`, `Text/` |
-| `Views/Panels/` | Right-side inspector: `Container/` (`RightPanel`, tab bar), `Color/`, `Gradient/`, `Layers/`, `PathOperations/`, `StrokeFill/`, `Typography/` |
+| `Views/Canvas/` | `Core/` (`DrawingCanvas` + view composition), `CoordinateSystem/`, `Metal/`, `Helpers/`, `Gestures/`, `Selection/`, `Tools/`, `ObjectRendering/`, `Handles/`, `Overlays/` |
+| `Views/Panels/` | Right-side inspector: `Container/` (`RightPanel`, tab bar), `Color/`, `Layers/`, `StrokeFill/` |
 | `Views/…` | `Window/` (main window, rulers, status bar), `Toolbar/` (`Bars/`, `Transformation/`, `Icons/`), `Dialogs/` (`Settings/`, `Import/`, `Objects/`, `NewDocument/`), `Preferences/`, `Components/`, `Styles/` |
 | `Utilities/` | Small cross-cutting `Extensions/` and the SF Symbols library |
 | `ThirdParty/` | libfreehand / librevenge (bridged via `App/Support/logos inkpen.io-Bridging-Header.h`) |
