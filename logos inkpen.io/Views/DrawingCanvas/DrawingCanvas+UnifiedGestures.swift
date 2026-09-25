@@ -106,7 +106,7 @@ extension DrawingCanvas {
             let zoomSensitivity: CGFloat = 0.01
             let zoomFactor = 1.0 - (dragDelta * zoomSensitivity)
             let targetZoom = zoomToolInitialZoomLevel * zoomFactor
-            let clampedZoom = max(0.75, min(640.0, targetZoom))
+            let clampedZoom = ZoomMath.clamp(targetZoom)
             let focalPoint = zoomToolDragStartPoint
             handleZoomAtPoint(newZoomLevel: clampedZoom, focalPoint: focalPoint, geometry: geometry)
         case .line, .rectangle, .square, .roundedRectangle, .pill, .circle, .ellipse, .oval, .egg, .cone, .star, .polygon, .pentagon, .hexagon, .heptagon, .octagon, .nonagon, .equilateralTriangle, .isoscelesTriangle, .rightTriangle, .acuteTriangle:
