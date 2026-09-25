@@ -54,6 +54,11 @@
 			path = "logos inkpen.ioUITests";
 			sourceTree = "<group>";
 		};
+		EA358E103066BB00006BB396 /* logos inkpen.ioTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "logos inkpen.ioTests";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,6 +91,7 @@
 			children = (
 				EAE1E5842E81980F00768154 /* logos inkpen.io */,
 				EAE1E59C2E81981000768154 /* logos inkpen.ioUITests */,
+				EA358E103066BB00006BB396 /* logos inkpen.ioTests */,
 				EAE1E5832E81980F00768154 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -137,6 +143,9 @@
 			);
 			dependencies = (
 				EAE1E5912E81981000768154 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				EA358E103066BB00006BB396 /* logos inkpen.ioTests */,
 			);
 			name = "logos inkpen.ioTests";
 			packageProductDependencies = (
