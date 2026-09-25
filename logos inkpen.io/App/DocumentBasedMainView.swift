@@ -92,6 +92,13 @@ struct DocumentBasedMainView: View {
             }
             AppEventMonitor.shared.setActiveDocument(document)
         }
+        .onReceive(document.commandManager.contentDidChange) { _ in
+            // FileDocument never sees edits made inside the VectorDocument class,
+            // so tell the owning NSDocument directly (dirty dot, close prompt, autosave).
+            guard let window = viewWindow,
+                  let nsDocument = NSDocumentController.shared.document(for: window) else { return }
+            nsDocument.updateChangeCount(.changeDone)
+        }
         .onDisappear {
             documentState.cleanup()
             document.imageStorage.removeAll()

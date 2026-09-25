@@ -11,6 +11,12 @@ class CommandManager: ObservableObject {
     private let maxStackSize: Int
 
     var undoCount: Int { undoStack.count }
+    var redoCount: Int { redoStack.count }
+
+    /// Fires when document content changes through a command, undo, or redo.
+    /// Selection-only commands do not fire. Used to mark the owning NSDocument
+    /// as edited so Save, the close prompt, and autosave all work.
+    let contentDidChange = PassthroughSubject<Void, Never>()
 
     weak var document: VectorDocument?
 
@@ -44,6 +50,7 @@ class CommandManager: ObservableObject {
         }
         redoStack.removeAll()
         updateState()
+        notifyContentChange(for: command)
     }
 
     func undo() {
@@ -55,6 +62,7 @@ class CommandManager: ObservableObject {
         redoStack.append(command)
         document.isUndoRedoOperation = false
         updateState()
+        notifyContentChange(for: command)
     }
 
     func redo() {
@@ -66,12 +74,18 @@ class CommandManager: ObservableObject {
         undoStack.append(command)
         document.isUndoRedoOperation = false
         updateState()
+        notifyContentChange(for: command)
     }
 
     func clear() {
         undoStack.removeAll()
         redoStack.removeAll()
         updateState()
+    }
+
+    private func notifyContentChange(for command: Command) {
+        if command is SelectionCommand { return }
+        contentDidChange.send()
     }
 
     private func updateState() {

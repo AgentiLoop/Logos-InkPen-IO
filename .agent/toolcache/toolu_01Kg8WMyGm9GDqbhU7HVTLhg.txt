@@ -1,0 +1,608 @@
+● Read zoom/selection/tool (3 tasks)
+[1] read_file: 1  	import SwiftUI
+2  	import simd
+3  	
+4  	extension DrawingCanvas {
+5  	    internal var allowedZoomSteps: [CGFloat] { [0.75, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, 32.0, 64.0, 128.0, 256.0, 512.0, 640.0] }
+6  	
+7  	    internal func quantizeZoomToNearestAllowed(_ zoom: CGFloat) -> CGFloat {
+8  	        let clamped = max(allowedZoomSteps.first ?? 0.75, min(allowedZoomSteps.last ?? 640.0, zoom))
+9  	
+10 	        var best = allowedZoomSteps.first ?? 0.75
+11 	        var bestDiff = abs(clamped - best)
+12 	        for step in allowedZoomSteps {
+13 	            let d = abs(clamped - step)
+14 	            if d < bestDiff {
+15 	                bestDiff = d
+16 	                best = step
+17 	            }
+18 	        }
+19 	        return best
+20 	    }
+21 	
+22 	    internal func nextAllowedStepUp(from zoom: CGFloat) -> CGFloat {
+23 	        let epsilon: CGFloat = 1e-6
+24 	        for step in allowedZoomSteps {
+25 	            if step > zoom + epsilon { return step }
+26 	        }
+27 	        return allowedZoomSteps.last ?? 640.0
+28 	    }
+29 	
+30 	    internal func nextAllowedStepDown(from zoom: CGFloat) -> CGFloat {
+31 	        let epsilon: CGFloat = 1e-6
+32 	        for step in allowedZoomSteps.reversed() {
+33 	            if step < zoom - epsilon { return step }
+34 	        }
+35 	        return allowedZoomSteps.first ?? 0.75
+36 	    }
+37 	
+38 	    internal func handleZoomGestureChanged(value: CGFloat, geometry: GeometryProxy) {
+39 	        guard !isBezierDrawing && !isPanGestureActive else {
+40 	            return
+41 	        }
+42 	        if !isZoomGestureActive {
+43 	            isZoomGestureActive = true
+44 	        }
+45 	        let zoomData = SIMD2<Float>(Float(initialZoomLevel), Float(value))
+46 	        let currentZoom = zoomData.x
+47 	        let gestureValue = zoomData.y
+48 	        let adjustedValue = 1.0 + (gestureValue - 1.0) * 1.5
+49 	        let newZoomLevel = CGFloat(currentZoom * adjustedValue)
+50 	        let clampedZoom = max(0.75, min(640.0, newZoomLevel))
+51 	        if currentMousePosition != .zero {
+52 	            handleZoomAtPoint(newZoomLevel: clampedZoom, focalPoint: currentMousePosition, geometry: geometry)
+53 	        } else {
+54 	            let viewCenter = CGPoint(x: geometry.size.width / 2.0, y: geometry.size.height / 2.0)
+55 	            handleZoomAtPoint(newZoomLevel: clampedZoom, focalPoint: viewCenter, geometry: geometry)
+56 	        }
+57 	    }
+58 	
+59 	    internal func handleZoomGestureEnded(value: CGFloat, geometry: GeometryProxy) {
+60 	        defer {
+61 	            isZoomGestureActive = false
+62 	        }
+63 	        guard !isBezierDrawing && !isPanGestureActive else {
+64 	            return
+65 	        }
+66 	        let zoomData = SIMD2<Float>(Float(initialZoomLevel), Float(value))
+67 	        let currentZoom = zoomData.x
+68 	        let gestureValue = zoomData.y
+69 	        let adjustedValue = 1.0 + (gestureValue - 1.0) * 1.5
+70 	        let finalZoomLevel = max(0.75, min(640.0, CGFloat(currentZoom * adjustedValue)))
+71 	        if currentMousePosition != .zero {
+72 	            handleZoomAtPoint(newZoomLevel: finalZoomLevel, focalPoint: currentMousePosition, geometry: geometry)
+73 	        } else {
+74 	            let viewCenter = CGPoint(x: geometry.size.width / 2.0, y: geometry.size.height / 2.0)
+75 	            handleZoomAtPoint(newZoomLevel: finalZoomLevel, focalPoint: viewCenter, geometry: geometry)
+76 	        }
+77 	        initialZoomLevel = finalZoomLevel
+78 	        #if os(macOS)
+79 	        if isCanvasHovering && document.viewState.currentTool == .zoom {
+80 	            MagnifyingGlassCursor.set()
+81 	            DispatchQueue.main.async { if isCanvasHovering && document.viewState.currentTool == .zoom { MagnifyingGlassCursor.set() } }
+82 	        }
+83 	        #endif
+84 	    }
+85 	
+86 	    internal func handleZoomRequest(_ request: ZoomRequest, geometry: GeometryProxy) {
+87 	        switch request.mode {
+88 	        case .fitToPage:
+89 	            fitToPage(geometry: geometry)
+90 	        case .actualSize:
+91 	            actualSize(geometry: geometry)
+92 	        case .zoomIn:
+93 	            let newZoom = nextAllowedStepUp(from: zoomLevel)
+94 	            let viewCenter = CGPoint(x: geometry.size.width / 2.0, y: geometry.size.height / 2.0)
+95 	            handleZoomAtPoint(newZoomLevel: newZoom, focalPoint: viewCenter, geometry: geometry)
+96 	        case .zoomOut:
+97 	            let newZoom = nextAllowedStepDown(from: zoomLevel)
+98 	            let viewCenter = CGPoint(x: geometry.size.width / 2.0, y: geometry.size.height / 2.0)
+99 	            handleZoomAtPoint(newZoomLevel: newZoom, focalPoint: viewCenter, geometry: geometry)
+100	        case .custom(let focalPoint):
+101	            handleZoomAtPoint(newZoomLevel: request.targetZoom, focalPoint: focalPoint, geometry: geometry)
+102	        }
+103	        document.clearZoomRequest()
+104	        #if os(macOS)
+105	        if isCanvasHovering {
+106	            switch document.viewState.currentTool {
+107	            case .hand:
+108	                NSCursor.openHand.set()
+109	            case .eyedropper:
+110	                EyedropperCursor.set()
+111	            case .selectSameColor:
+112	                EyedropperCursor.set()
+113	            case .zoom:
+114	                MagnifyingGlassCursor.set()
+115	            default:
+116	                break
+117	            }
+118	            DispatchQueue.main.async {
+119	                if isCanvasHovering {
+120	                    switch document.viewState.currentTool {
+121	                    case .hand:
+122	                        NSCursor.openHand.set()
+123	                    case .eyedropper:
+124	                        EyedropperCursor.set()
+125	                    case .zoom:
+126	                        MagnifyingGlassCursor.set()
+127	                    default:
+128	                        break
+129	                    }
+130	                }
+131	            }
+132	        }
+133	        #endif
+134	    }
+135	}
+136	
+
+[2] read_file: 1  	import SwiftUI
+2  	import Combine
+3  	
+4  	extension DrawingCanvas {
+5  	
+6  	    internal func handleSelectionTap(at location: CGPoint) {
+7  	        let validatedLocation = validateAndCorrectLocation(location)
+8  	        if isOptionPressed && document.viewState.currentTool == .selection {
+9  	            document.viewState.currentTool = .directSelection
+10 	            handleDirectSelectionTap(at: validatedLocation)
+11 	            return
+12 	        }
+13 	        if isControlPressed && document.viewState.currentTool == .selection {
+14 	            var clickedShape: VectorShape?
+15 	            for layerIndex in stride(from: document.snapshot.layers.count - 1, through: 0, by: -1) {
+16 	                let layer = document.snapshot.layers[layerIndex]
+17 	                if layerIndex < document.snapshot.layers.count && document.snapshot.layers[layerIndex].isLocked {
+18 	                    continue
+19 	                }
+20 	                for objectID in layer.objectIDs.reversed() {
+21 	                    guard let object = document.snapshot.objects[objectID] else { continue }
+22 	                    switch object.objectType {
+23 	                    case .shape(let shape),
+24 	                         .image(let shape),
+25 	                         .warp(let shape),
+26 	                         .group(let shape),
+27 	                         .clipGroup(let shape),
+28 	                         .clipMask(let shape),
+29 	                         .guide(let shape):
+30 	                        if !shape.isVisible { continue }
+31 	                        let isBackgroundShape = (shape.name == "Canvas Background" || shape.name == "Pasteboard Background")
+32 	                        if isBackgroundShape { continue }
+33 	                        let isHit = performShapeHitTest(shape: shape, at: validatedLocation)
+34 	                        if isHit {
+35 	                            clickedShape = shape
+36 	                            break
+37 	                        }
+38 	                    case .text:
+39 	                        continue
+40 	                    }
+41 	                }
+42 	                if clickedShape != nil {
+43 	                    break
+44 	                }
+45 	            }
+46 	            if let shape = clickedShape, isRectangleBasedShape(shape) {
+47 	                if !shape.isRoundedRectangle {
+48 	                }
+49 	                let previousSelection = document.viewState.selectedObjectIDs
+50 	                document.setSelectionWithUndo([shape.id], ordered: [shape.id])
+51 	                isCornerRadiusEditMode = true
+52 	                var affectedLayers = Set<Int>()
+53 	                for objectID in previousSelection {
+54 	                    if let object = document.snapshot.objects[objectID] {
+55 	                        affectedLayers.insert(object.layerIndex)
+56 	                    }
+57 	                }
+58 	                if let object = document.snapshot.objects[shape.id] {
+59 	                    affectedLayers.insert(object.layerIndex)
+60 	                }
+61 	                document.triggerLayerUpdates(for: affectedLayers)
+62 	                selectedPoints.removeAll()
+63 	                selectedHandles.removeAll()
+64 	                selectedObjectIDs.removeAll()
+65 	                return
+66 	            } else if clickedShape != nil {
+67 	            }
+68 	        }
+69 	        selectedPoints.removeAll()
+70 	        selectedHandles.removeAll()
+71 	        selectedObjectIDs.removeAll()
+72 	        isCornerRadiusEditMode = false
+73 	        guard document.viewState.currentTool == .selection ||
+74 	              document.viewState.currentTool == .scale ||
+75 	              document.viewState.currentTool == .rotate ||
+76 	              document.viewState.currentTool == .reflect ||
+77 	              document.viewState.currentTool == .shear ||
+78 	              document.viewState.currentTool == .warp else {
+79 	            if !isShiftPressed && !isCommandPressed {
+80 	                document.clearSelectionWithUndo()
+81 	            }
+82 	            return
+83 	        }
+84 	        if isCommandPressed {
+85 	            let objectsAtLocation = findAllObjectsAtLocation(validatedLocation)
+86 	            if !objectsAtLocation.isEmpty {
+87 	                let tolerance: CGFloat = 5.0
+88 	                let isSameLocation = abs(validatedLocation.x - selectBehindLocation.x) < tolerance &&
+89 	                                     abs(validatedLocation.y - selectBehindLocation.y) < tolerance
+90 	                if isSameLocation {
+91 	                    selectBehindIndex = (selectBehindIndex + 1) % objectsAtLocation.count
+92 	                } else {
+93 	                    selectBehindLocation = validatedLocation
+94 	                    let topObject = objectsAtLocation[0]
+95 	                    if document.viewState.selectedObjectIDs.contains(topObject.id) && objectsAtLocation.count > 1 {
+96 	                        selectBehindIndex = 1
+97 	                    } else {
+98 	                        selectBehindIndex = 0
+99 	                    }
+100	                }
+101	                let objectToSelect = objectsAtLocation[selectBehindIndex]
+102	                let previousSelection = document.viewState.selectedObjectIDs
+103	                document.setSelectionWithUndo([objectToSelect.id], ordered: [objectToSelect.id])
+104	                var affectedLayers = Set<Int>()
+105	                for objectID in previousSelection {
+106	                    if let object = document.snapshot.objects[objectID] {
+107	                        affectedLayers.insert(object.layerIndex)
+108	                    }
+109	                }
+110	                affectedLayers.insert(objectToSelect.layerIndex)
+111	                document.triggerLayerUpdates(for: affectedLayers)
+112	                document.selectedLayerIndex = objectToSelect.layerIndex
+113	                return
+114	            }
+115	        }
+116	        let hitObject = findObjectAtLocationOptimized(validatedLocation)
+117	        if !isCommandPressed {
+118	            selectBehindIndex = 0
+119	            selectBehindLocation = .zero
+120	        }
+121	        if let hitObject = hitObject {
+122	            let objectToSelect = hitObject
+123	            let previousSelection = document.viewState.selectedObjectIDs
+124	            if isShiftPressed {
+125	                document.addToSelectionWithUndo(objectToSelect.id)
+126	            } else {
+127	                document.setSelectionWithUndo([objectToSelect.id], ordered: [objectToSelect.id])
+128	            }
+129	            var affectedLayers = Set<Int>()
+130	            for objectID in previousSelection {
+131	                if let object = document.snapshot.objects[objectID] {
+132	                    affectedLayers.insert(object.layerIndex)
+133	                }
+134	            }
+135	            for objectID in document.viewState.selectedObjectIDs {
+136	                if let object = document.snapshot.objects[objectID] {
+137	                    affectedLayers.insert(object.layerIndex)
+138	                }
+139	            }
+140	            document.triggerLayerUpdates(for: affectedLayers)
+141	            if case .text = objectToSelect.objectType {
+142	                document.viewState.transformOrigin = .topLeft
+143	            }
+144	            document.selectedLayerIndex = objectToSelect.layerIndex
+145	            if let selectedColor = document.getSelectedObjectColor() {
+146	                if document.viewState.activeColorTarget == .stroke {
+147	                    document.defaultStrokeColor = selectedColor
+148	                } else {
+149	                    document.defaultFillColor = selectedColor
+150	                }
+151	            }
+152	        } else {
+153	            if !isShiftPressed && !isCommandPressed {
+154	                let previousSelection = document.viewState.selectedObjectIDs
+155	                document.clearSelectionWithUndo()
+156	                var affectedLayers = Set<Int>()
+157	                for objectID in previousSelection {
+158	                    if let object = document.snapshot.objects[objectID] {
+159	                        affectedLayers.insert(object.layerIndex)
+160	                    }
+161	                }
+162	                document.triggerLayerUpdates(for: affectedLayers)
+163	                selectedPoints.removeAll()
+164	                selectedHandles.removeAll()
+165	                selectedObjectIDs.removeAll()
+166	                syncDirectSelectionWithDocument()
+167	                isCornerRadiusEditMode = false
+168	            }
+169	        }
+170	    }
+171	
+172	    internal func performPathOnlyHitTest(shape: VectorShape, at location: CGPoint) -> Bool {
+173	        return performShapeHitTest(shape: shape, at: location)
+174	    }
+175	
+176	    internal func performShapeHitTest(shape: VectorShape, at location: CGPoint) -> Bool {
+177	        if shape.typography != nil {
+178	            let textBounds: CGRect
+179	            if let position = shape.textPosition, let size = shape.areaSize {
+180	                textBounds = CGRect(origin: position, size: size)
+181	            } else {
+182	                textBounds = CGRect(
+183	                    x: shape.transform.tx,
+184	                    y: shape.transform.ty,
+185	                    width: shape.bounds.width,
+186	                    height: shape.bounds.height
+187	                )
+188	            }
+189	            return textBounds.contains(location)
+190	        }
+191	        if shape.isGroupContainer {
+192	            return shape.groupBounds.contains(location)
+193	        }
+194	        if shape.isGuide, let orientation = shape.guideOrientation {
+195	            let guideTolerance: CGFloat = 5.0
+196	            guard let firstElement = shape.path.elements.first,
+197	                  case .move(let point) = firstElement else {
+198	                return false
+199	            }
+200	            switch orientation {
+201	            case .horizontal:
+202	                let guideY = CGFloat(point.y)
+203	                return abs(location.y - guideY) <= guideTolerance
+204	            case .vertical:
+205	                let guideX = CGFloat(point.x)
+206	                return abs(location.x - guideX) <= guideTolerance
+207	            }
+208	        }
+209	        let hitBounds = shape.bounds.applying(shape.transform)
+210	        return hitBounds.contains(location)
+211	    }
+212	
+213	     internal func validateAndCorrectLocation(_ location: CGPoint) -> CGPoint {
+214	         if location.x.isNaN || location.y.isNaN || location.x.isInfinite || location.y.isInfinite {
+215	             Log.error("❌ INVALID COORDINATES: \(location) - using zero point", category: .error)
+216	             return .zero
+217	         }
+218	         let maxReasonableValue: CGFloat = 1000000.0
+219	         if abs(location.x) > maxReasonableValue || abs(location.y) > maxReasonableValue {
+220	             Log.error("❌ EXTREME COORDINATES: \(location) - using zero point", category: .error)
+221	             return .zero
+222	         }
+223	         return location
+224	     }
+225	
+226	    private func isRectangleBasedShape(_ shape: VectorShape) -> Bool {
+227	        let shapeName = shape.name.lowercased()
+228	        return shapeName == "rectangle" || shapeName == "square" ||
+229	               shapeName == "rounded rectangle" || shapeName == "pill"
+230	    }
+231	
+232	    private func isLocationWithinSelectionBox(_ location: CGPoint) -> Bool {
+233	        for objectID in document.viewState.selectedObjectIDs {
+234	            guard let object = document.snapshot.objects[objectID] else { continue }
+235	            switch object.objectType {
+236	            case .text(let shape):
+237	                let textContentArea = CGRect(
+238	                    x: CGPoint(x: shape.transform.tx, y: shape.transform.ty).x,
+239	                    y: CGPoint(x: shape.transform.tx, y: shape.transform.ty).y,
+240	                    width: shape.bounds.width,
+241	                    height: shape.bounds.height
+242	                )
+243	                let contains = textContentArea.contains(location)
+244	                if contains {
+245	                    return true
+246	                }
+247	            case .shape(let shape),
+248	                 .image(let shape),
+249	                 .warp(let shape),
+250	                 .group(let shape),
+251	                 .clipGroup(let shape),
+252	                 .clipMask(let shape),
+253	                 .guide(let shape):
+254	                let transformedBounds = shape.bounds.applying(shape.transform)
+255	                let selectionBoxBounds = transformedBounds.insetBy(dx: 0, dy: 0)
+256	                let contains = selectionBoxBounds.contains(location)
+257	                if contains {
+258	                    return true
+259	                }
+260	            }
+261	        }
+262	        return false
+263	    }
+264	
+265	    private func findShapeByID(_ shapeID: UUID) -> VectorShape? {
+266	        guard let object = document.snapshot.objects[shapeID] else { return nil }
+267	        switch object.objectType {
+268	        case .shape(let shape),
+269	             .image(let shape),
+270	             .warp(let shape),
+271	             .group(let shape),
+272	             .clipGroup(let shape),
+273	             .clipMask(let shape),
+274	             .guide(let shape):
+275	            return shape
+276	        case .text:
+277	            return nil
+278	        }
+279	    }
+280	
+281	    internal func findAllObjectsAtLocation(_ location: CGPoint) -> [VectorObject] {
+282	        var results: [VectorObject] = []
+283	        for layerIndex in stride(from: document.snapshot.layers.count - 1, through: 0, by: -1) {
+284	            let layer = document.snapshot.layers[layerIndex]
+285	            if layer.isLocked { continue }
+286	            for objectID in layer.objectIDs.reversed() {
+287	                guard let object = document.snapshot.objects[objectID] else { continue }
+288	                let shape = object.shape
+289	                if shape.name == "Canvas Background" || shape.name == "Pasteboard Background" {
+290	                    continue
+291	                }
+292	                if !shape.isVisible { continue }
+293	                if performShapeHitTest(shape: shape, at: location) {
+294	                    results.append(object)
+295	                }
+296	            }
+297	        }
+298	        return results
+299	    }
+300	}
+301	
+
+[3] read_file: 1  	import SwiftUI
+2  	import Combine
+3  	
+4  	extension DrawingCanvas {
+5  	
+6  	    internal func handleToolChange(oldTool: DrawingTool, newTool: DrawingTool) {
+7  	        let isCmdPressed = NSEvent.modifierFlags.contains(.command)
+8  	        if newTool == .selection && isCmdPressed {
+9  	            isTemporarySelectionViaCommand = true
+10 	        } else if oldTool == .selection && isTemporarySelectionViaCommand {
+11 	            isTemporarySelectionViaCommand = false
+12 	        }
+13 	        if isCornerRadiusEditMode {
+14 	            isCornerRadiusEditMode = false
+15 	        }
+16 	        if (previousTool == .font || oldTool == .font) && newTool != .font {
+17 	            stopAllTextEditing()
+18 	        } else if newTool == .selection && !isTemporarySelectionViaCommand {
+19 	            stopAllTextEditing()
+20 	        }
+21 	        let isTemporaryTool = newTool == .hand || newTool == .zoom || (newTool == .selection && isTemporarySelectionViaCommand)
+22 	        if previousTool == .bezierPen && newTool != .bezierPen && !isTemporaryTool && isBezierDrawing {
+23 	            finishBezierPath()
+24 	        }
+25 	        if previousTool == .freehand && newTool != .freehand && !isTemporaryTool && isFreehandDrawing {
+26 	            handleFreehandDragEnd()
+27 	        }
+28 	        if previousTool == .font && newTool == .selection {
+29 	        }
+30 	        if previousTool == .selection && newTool == .font {
+31 	        }
+32 	        handleSelectionConversion(from: oldTool, to: newTool)
+33 	        previousTool = newTool
+34 	    }
+35 	
+36 	    private func stopAllTextEditing() {
+37 	        var stoppedCount = 0
+38 	        for obj in document.snapshot.objects.values {
+39 	            if case .text(let shape) = obj.objectType, shape.isEditing == true {
+40 	                document.setTextEditingInUnified(id: shape.id, isEditing: false)
+41 	                stoppedCount += 1
+42 	            }
+43 	        }
+44 	        for obj in document.snapshot.objects.values {
+45 	            switch obj.objectType {
+46 	            case .group(let groupShape), .clipGroup(let groupShape):
+47 	                if groupShape.isGroupContainer {
+48 	                    for childShape in groupShape.groupedShapes {
+49 	                        if childShape.typography != nil && childShape.isEditing == true {
+50 	                            document.setTextEditingInUnified(id: childShape.id, isEditing: false)
+51 	                            stoppedCount += 1
+52 	                        }
+53 	                    }
+54 	                }
+55 	            default:
+56 	                break
+57 	            }
+58 	        }
+59 	        if isEditingText {
+60 	            isEditingText = false
+61 	            editingTextID = nil
+62 	            currentCursorPosition = 0
+63 	            currentSelectionRange = NSRange(location: 0, length: 0)
+64 	        }
+65 	        isTextEditingMode = false
+66 	        #if os(macOS)
+67 	        NSCursor.arrow.set()
+68 	        #endif
+69 	        if let window = NSApp.keyWindow {
+70 	            window.makeFirstResponder(nil)
+71 	        }
+72 	    }
+73 	
+74 	    private func finishTextEditingButKeepSelected(_ textID: UUID) {
+75 	        document.setTextEditingInUnified(id: textID, isEditing: false)
+76 	        document.viewState.selectedObjectIDs = [textID]
+77 	        isEditingText = false
+78 	        editingTextID = nil
+79 	        currentCursorPosition = 0
+80 	        currentSelectionRange = NSRange(location: 0, length: 0)
+81 	    }
+82 	
+83 	    private func handleSelectionConversion(from oldTool: DrawingTool, to newTool: DrawingTool) {
+84 	        if newTool == .selection && isTemporarySelectionViaCommand {
+85 	        }
+86 	        else if newTool == .selection {
+87 	            if !selectedObjectIDs.isEmpty {
+88 	                document.viewState.selectedObjectIDs = selectedObjectIDs
+89 	                selectedObjectIDs.removeAll()
+90 	                selectedPoints.removeAll()
+91 	                selectedHandles.removeAll()
+92 	            }
+93 	        }
+94 	        else if newTool == .directSelection {
+95 	            selectedPoints.removeAll()
+96 	            selectedHandles.removeAll()
+97 	            visibleHandles.removeAll()
+98 	            if !document.viewState.selectedObjectIDs.isEmpty {
+99 	                var newSelection = Set<UUID>()
+100	                for objectID in document.viewState.selectedObjectIDs {
+101	                    if let obj = document.snapshot.objects[objectID] {
+102	                        let shape = obj.shape
+103	                        if shape.isGroupContainer {
+104	                            if let topMemberID = shape.memberIDs.last,
+105	
+106	                               let _ = document.snapshot.objects[topMemberID] {
+107	                                newSelection.insert(topMemberID)
+108	                            } else if let topGroupedShape = shape.groupedShapes.last {
+109	                                newSelection.insert(topGroupedShape.id)
+110	                            }
+111	                        } else {
+112	                            newSelection.insert(objectID)
+113	                        }
+114	                    }
+115	                }
+116	                selectedObjectIDs = newSelection
+117	                syncDirectSelectionWithDocument()
+118	            }
+119	        }
+120	        else if newTool == .bezierPen {
+121	            if let selectedPointID = selectedPoints.first {
+122	                if getShapeForPoint(selectedPointID) != nil,
+123	
+124	                   let pointPosition = getPointPosition(selectedPointID) {
+125	                    continueExistingPath(from: pointPosition)
+126	                }
+127	            }
+128	        }
+129	        else if newTool == .convertAnchorPoint || newTool == .penPlusMinus {
+130	            selectedPoints.removeAll()
+131	            selectedHandles.removeAll()
+132	            visibleHandles.removeAll()
+133	            if !document.viewState.selectedObjectIDs.isEmpty {
+134	                selectedObjectIDs = document.viewState.selectedObjectIDs
+135	                syncDirectSelectionWithDocument()
+136	            }
+137	        }
+138	        else if newTool == .font {
+139	            for selectedID in document.viewState.selectedObjectIDs {
+140	                if let obj = document.snapshot.objects[selectedID],
+141	                   case .text = obj.objectType {
+142	                    document.setTextEditingInUnified(id: selectedID, isEditing: true)
+143	                    break
+144	                }
+145	            }
+146	        }
+147	        else if (oldTool == .directSelection || oldTool == .convertAnchorPoint || oldTool == .penPlusMinus) &&
+148	                 newTool != .selection && newTool != .directSelection && newTool != .convertAnchorPoint && newTool != .penPlusMinus && newTool != .bezierPen && newTool != .font && newTool != .hand && newTool != .zoom && newTool != .scale && newTool != .rotate && newTool != .reflect && newTool != .shear && newTool != .warp {
+149	            document.viewState.selectedObjectIDs.removeAll()
+150	            selectedObjectIDs.removeAll()
+151	            selectedPoints.removeAll()
+152	            selectedHandles.removeAll()
+153	            syncDirectSelectionWithDocument()
+154	        }
+155	        else if newTool == .hand || oldTool == .hand || newTool == .zoom || oldTool == .zoom {
+156	        }
+157	    }
+158	
+159	    internal func clearToolState() {
+160	        if document.viewState.currentTool != .bezierPen {
+161	            showClosePathHint = false
+162	            showContinuePathHint = false
+163	        }
+164	    }
+165	}
+166	
+
+● 3/3 tasks completed

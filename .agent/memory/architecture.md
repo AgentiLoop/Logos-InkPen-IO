@@ -1,0 +1,3 @@
+- App: SwiftUI DocumentGroup + `InkpenDocument: FileDocument` wrapping class `VectorDocument` (App/InkpenDocument.swift). Custom undo: Utilities/Undo/CommandManager.swift (not NSUndoManager).
+- Global key handling: App/AppEventMonitor.swift (space=hand, cmd=temp selection, arrows=nudge, tab=deselect). Menu shortcuts in logos_inkpen_ioApp.swift.
+- Canvas gestures: Views/DrawingCanvas/DrawingCanvas+*.swift (UnifiedGestures, SelectionTap, OptimizedHitTest, Zoom, ToolManagement).

@@ -1,0 +1,453 @@
+Replaced 1 occurrence in /Users/toddbruss/Documents/GitHub/logos/logos inkpen.io/App/DocumentBasedMainView.swift [verified: true]
+
+📎import SwiftUI
+📎import UniformTypeIdentifiers
+📎
+📎struct DocumentBasedMainView: View {
+📎
+📎    @ObservedObject var document: VectorDocument
+📎
+📎    let fileURL: URL?
+📎
+📎    @StateObject private var documentState = DocumentState()
+📎
+📎    @Environment(AppState.self) private var appState
+📎
+📎    @Binding var imagePreviewQuality: Double
+📎    @Binding var imageTileSize: Int
+📎    @Binding var imageInterpolationQuality: Int
+📎
+📎    @State var showingDocumentSettings = false
+📎    @State var showingColorPicker = false
+📎    @State var currentDocumentURL: URL? = nil
+📎    @State var showingImportDialog = false
+📎    @State var importResult: VectorImportResult?
+📎    @State var showingImportProgress = false
+📎    @State var showingSVGTestHarness = false
+📎    @State var showingPressureCalibration = false
+📎    @State var showingSFSymbolsPicker = false
+📎    @State var hasInitializedTool = false
+📎    @State var layerPreviewOpacities: [UUID: Double] = [:]
+📎    @State var liveDragOffset: CGPoint = .zero
+📎    @State var liveScaleDimensions: CGSize = .zero
+📎    @State var liveScaleTransform: CGAffineTransform = .identity
+📎    @State var livePointPositions: [PointID: CGPoint] = [:]
+📎    @State var liveHandlePositions: [HandleID: CGPoint] = [:]
+📎    @State var colorDeltaColor: VectorColor? = nil
+📎    @State var colorDeltaOpacity: Double? = nil
+📎    @State var colorDeltaBlendMode: BlendMode? = nil
+📎    @State var fillDeltaOpacity: Double? = nil
+📎    @State var strokeDeltaOpacity: Double? = nil
+📎    @State var strokeDeltaWidth: Double? = nil
+📎    @State var activeGradientDelta: VectorGradient? = nil
+📎    @State var fontSizeDelta: Double? = nil
+📎    @State var lineSpacingDelta: Double? = nil
+📎    @State var lineHeightDelta: Double? = nil
+📎    @State var letterSpacingDelta: Double? = nil
+📎    @State var textContentDelta: (id: UUID, content: String)? = nil
+📎    @State var selectedLayerIndex: Int? = nil
+📎    @State var processedLayersDuringDrag: Set<Int> = []
+📎    @State var processedObjectsDuringDrag: Set<UUID> = []
+📎    @State var zoomLevel: Double = 1.0
+📎    @State var canvasOffset: CGPoint = .zero
+📎    @State var viewportSize: CGSize = .zero
+📎
+📎    @State private var viewWindow: NSWindow? = nil
+📎    @State private var isTabActive: Bool = true
+📎    var body: some View {
+📎        Group {
+📎            if isTabActive {
+📎                fullDocumentView
+📎            } else {
+📎                Color(nsColor: .windowBackgroundColor)
+📎            }
+📎        }
+📎        .background(HostingWindowFinder(callback: { window in
+📎            self.viewWindow = window
+📎            if !isTabActive, let w = window, (w.isKeyWindow || w.isMainWindow) {
+📎                isTabActive = true
+📎                MemoryDiag.checkpoint("Tab ACTIVATED (first appear)")
+📎            }
+📎        }))
+📎        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeMainNotification)) { notification in
+📎            guard let window = notification.object as? NSWindow,
+📎                  let vw = viewWindow else { return }
+📎            if window === vw {
+📎                if !isTabActive {
+📎                    isTabActive = true
+📎                    MemoryDiag.checkpoint("Tab RESUMED")
+📎                }
+📎                AppEventMonitor.shared.setActiveDocument(document)
+📎            } else if window.tabbingIdentifier == vw.tabbingIdentifier {
+📎                if isTabActive {
+📎                    isTabActive = false
+📎                    MemoryDiag.checkpoint("Tab SUSPENDED")
+📎                }
+📎            }
+📎        }
+📎        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { notification in
+📎            guard let window = notification.object as? NSWindow,
+📎                  let vw = viewWindow, window === vw else { return }
+📎            if !isTabActive {
+📎                isTabActive = true
+📎                MemoryDiag.checkpoint("Tab RESUMED (key)")
+📎            }
+📎            AppEventMonitor.shared.setActiveDocument(document)
+📎        }
+📎        .on
+✅Receive(document.commandManager.contentDidChange) { _ in
+✅            // FileDocument never sees edits made inside the VectorDocument class,
+✅            // so tell the owning NSDocument directly (dirty dot, close prompt, autosave).
+✅            guard let window = viewWindow,
+✅                  let nsDocument = NSDocumentController.shared.document(for: window) else { return }
+✅            nsDocument.updateChangeCount(.changeDone)
+✅        }
+✅        .on
+📎Disappear {
+📎            documentState.cleanup()
+📎            document.imageStorage.removeAll()
+📎            document.lastDrawnImageHash.removeAll()
+📎            document.snapshot.objects.removeAll()
+📎            document.snapshot.layers.removeAll()
+📎            document.commandManager.clear()
+📎            document.commandManager.document = nil
+📎            MemoryDiag.checkpoint("Tab CLOSED")
+📎            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+📎                if NSDocumentController.shared.documents.isEmpty {
+📎                    SharedMetalDevice.releaseAll()
+📎                    MemoryDiag.checkpoint("Metal singletons released (no documents)")
+📎                }
+📎            }
+📎        }
+📎    }
+📎
+📎    private var fullDocumentView: some View {
+📎        VStack(spacing: 0) {
+📎            HStack(spacing: 0) {
+📎                VerticalToolbar(
+📎                    currentTool: document.viewState.currentTool,
+📎                    viewState: document.viewState,
+📎                    document: document,
+📎                    colorDeltaColor: $colorDeltaColor,
+📎                    colorDeltaOpacity: $colorDeltaOpacity,
+📎                    colorDeltaBlendMode: $colorDeltaBlendMode,
+📎                    defaultFillColor: Binding(
+📎                        get: { document.defaultFillColor },
+📎                        set: { document.defaultFillColor = $0 }
+📎                    ),
+📎                    defaultStrokeColor: Binding(
+📎                        get: { document.defaultStrokeColor },
+📎                        set: { document.defaultStrokeColor = $0 }
+📎                    )
+📎                )
+📎                .frame(width: 48)
+📎                .contentShape(Rectangle())
+📎                .background(Color.black.opacity(0.8))
+📎                .zIndex(100)
+📎                .onAppear { MemoryDiag.checkpoint("VerticalToolbar.onAppear") }
+📎                GeometryReader { geometry in
+📎                    ZStack {
+📎                        Rectangle()
+📎                            .fill(Color.gray.opacity(0.1))
+📎                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+📎                            .allowsHitTesting(false)
+📎                        DrawingCanvas(document: document, zoomLevel: $zoomLevel, canvasOffset: $canvasOffset, layerPreviewOpacities: $layerPreviewOpacities, liveDragOffset: $liveDragOffset, liveScaleDimensions: $liveScaleDimensions, liveScaleTransform: $liveScaleTransform, livePointPositions: $livePointPositions, liveHandlePositions: $liveHandlePositions, fillDeltaOpacity: $fillDeltaOpacity, strokeDeltaOpacity: $strokeDeltaOpacity, strokeDeltaWidth: $strokeDeltaWidth, colorDeltaColor: $colorDeltaColor, colorDeltaOpacity: $colorDeltaOpacity, activeGradientDelta: $activeGradientDelta, fontSizeDelta: $fontSizeDelta, lineSpacingDelta: $lineSpacingDelta, lineHeightDelta: $lineHeightDelta, letterSpacingDelta: $letterSpacingDelta, textContentDelta: $textContentDelta, imagePreviewQuality: $imagePreviewQuality, imageTileSize: $imageTileSize, imageInterpolationQuality: $imageInterpolationQuality)
+📎                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+📎                            .contentShape(Rectangle())
+📎                            .background(Color.clear)
+📎                            .zIndex(1)
+📎                            .onChange(of: geometry.size) { _, newSize in
+📎                                viewportSize = newSize
+📎                            }
+📎                            .onAppear {
+📎                                viewportSize = geometry.size
+📎                            }
+📎                        RulersView(
+📎                            document: document,
+📎                            geometry: geometry,
+📎                            zoomLevel: zoomLevel,
+📎                            canvasOffset: canvasOffset
+📎                        )
+📎                        .zIndex(50)
+📎                    }
+📎                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+📎                    .frame(minWidth: 400, minHeight: 300)
+📎                }
+📎                .frame(maxWidth: .infinity)
+📎                .frame(minWidth: 500)
+📎                .contentShape(Rectangle())
+📎                RightPanel(
+📎                    snapshot: document.snapshot,
+📎                    viewState: document.viewState,
+📎                    document: document,
+📎                    layerPreviewOpacities: $layerPreviewOpacities,
+📎                    colorDeltaColor: $colorDeltaColor,
+📎                    colorDeltaOpacity: $colorDeltaOpacity,
+📎                    colorDeltaBlendMode: $colorDeltaBlendMode,
+📎                    fillDeltaOpacity: $fillDeltaOpacity,
+📎                    strokeDeltaOpacity: $strokeDeltaOpacity,
+📎                    strokeDeltaWidth: $strokeDeltaWidth,
+📎                    activeGradientDelta: $activeGradientDelta,
+📎                    fontSizeDelta: $fontSizeDelta,
+📎                    lineSpacingDelta: $lineSpacingDelta,
+📎                    lineHeightDelta: $lineHeightDelta,
+📎                    letterSpacingDelta: $letterSpacingDelta,
+📎                    selectedLayerIndex: $selectedLayerIndex,
+📎                    processedLayersDuringDrag: $processedLayersDuringDrag,
+📎                    processedObjectsDuringDrag: $processedObjectsDuringDrag
+📎                )
+📎                .frame(width: 280)
+📎                .frame(minWidth: 280)
+📎                .zIndex(100)
+📎                .onAppear { MemoryDiag.checkpoint("RightPanel.onAppear") }
+📎            }
+📎            .frame(maxWidth: .infinity, maxHeight: .infinity)
+📎            .frame(minWidth: 828, minHeight: 400)
+📎            StatusBar(zoomLevel: zoomLevel, document: document)
+📎        }
+📎        .frame(minHeight: 524)
+📎        .toolbarBackground(Color.platformControlBackground, for: .windowToolbar)
+📎        .toolbarBackground(.visible, for: .windowToolbar)
+📎        .toolbar {
+📎            MainToolbarContent(
+📎                document: document,
+📎                appState: appState,
+📎                currentDocumentURL: $currentDocumentURL,
+📎                showingDocumentSettings: $showingDocumentSettings,
+📎                showingImportDialog: $showingImportDialog,
+📎                importResult: $importResult,
+📎                showingImportProgress: $showingImportProgress,
+📎                showingSVGTestHarness: $showingSVGTestHarness,
+📎                showingPressureCalibration: $showingPressureCalibration,
+📎                showingSFSymbolsPicker: $showingSFSymbolsPicker,
+📎                liveDragOffset: $liveDragOffset,
+📎                liveScaleDimensions: $liveScaleDimensions,
+📎                onRunDiagnostics: runPasteboardDiagnostics
+📎            )
+📎        }
+📎        .sheet(isPresented: $showingDocumentSettings) {
+📎            DocumentSettingsView(document: document)
+📎        }
+📎        .sheet(isPresented: Binding(
+📎            get: { documentState.showMoveDialog },
+📎            set: { documentState.showMoveDialog = $0 }
+📎        )) {
+📎            MoveObjectDialog(document: document, isPresented: Binding(
+📎                get: { documentState.showMoveDialog },
+📎                set: { documentState.showMoveDialog = $0 }
+📎            ))
+📎        }
+📎        .sheet(isPresented: $showingColorPicker) {
+📎            ColorPickerModal(
+📎                snapshot: Binding(
+📎                    get: { document.snapshot },
+📎                    set: { document.snapshot = $0 }
+📎                ),
+📎                selectedObjectIDs: document.viewState.selectedObjectIDs,
+📎                activeColorTarget: document.viewState.activeColorTarget,
+📎                colorMode: Binding(
+📎                    get: { document.settings.colorMode },
+📎                    set: { document.settings.colorMode = $0 }
+📎                ),
+📎                defaultFillColor: Binding(
+📎                    get: { document.defaultFillColor },
+📎                    set: { document.defaultFillColor = $0 }
+📎                ),
+📎                defaultStrokeColor: Binding(
+📎                    get: { document.defaultStrokeColor },
+📎                    set: { document.defaultStrokeColor = $0 }
+📎                ),
+📎                defaultFillOpacity: document.defaultFillOpacity,
+📎                defaultStrokeOpacity: document.defaultStrokeOpacity,
+📎                currentSwatches: document.currentSwatches,
+📎                onTriggerLayerUpdates: { indices in document.triggerLayerUpdates(for: indices) },
+📎                onAddColorSwatch: { color in document.addColorSwatch(color) },
+📎                onRemoveColorSwatch: { color in document.removeColorSwatch(color) },
+📎                onSetActiveColor: { color in document.setActiveColor(color) },
+📎                colorDeltaColor: $colorDeltaColor,
+📎                colorDeltaOpacity: $colorDeltaOpacity,
+📎                title: "Color Picker",
+📎                onColorSelected: { color in
+📎                    if document.viewState.activeColorTarget == .stroke {
+📎                        document.defaultStrokeColor = color
+📎                    } else {
+📎                        document.defaultFillColor = color
+📎                    }
+📎                    document.addColorSwatch(color)
+📎                }
+📎            )
+📎        }
+📎        .onAppear {
+📎            if let url = fileURL {
+📎                ImageContentRegistry.setBaseDirectory(url.deletingLastPathComponent(), for: document)
+📎                for object in document.snapshot.objects.values {
+📎                    let shape: VectorShape
+📎                    switch object.objectType {
+📎                    case .shape(let s), .image(let s), .clipGroup(let s), .clipMask(let s), .group(let s), .warp(let s), .guide(let s):
+📎                        shape = s
+📎                    case .text(let s):
+📎                        shape = s
+📎                    }
+📎                    hydrateGroupImagesRecursive(shape, in: document)
+📎                }
+📎            }
+📎        }
+📎        .onChange(of: fileURL) { oldURL, newURL in
+📎            guard let url = newURL else { return }
+📎            currentDocumentURL = url
+📎        }
+📎        .fileImporter(
+📎            isPresented: $showingImportDialog,
+📎            allowedContentTypes: [
+📎                .svg,
+📎                .pdf,
+📎                .png,
+📎                .jpeg,
+📎                .tiff,
+📎                .bmp,
+📎                .heic,
+📎                .heif,
+📎                .gif,
+📎                .webP,
+📎                .image,
+📎                .data
+📎            ],
+📎            allowsMultipleSelection: false
+📎        ) { result in
+📎            switch result {
+📎            case .success(let urls):
+📎                guard let url = urls.first else { return }
+📎                importVectorFile(from: url)
+📎            case .failure(let error):
+📎                Log.error("❌ File import error: \(error)", category: .error)
+📎            }
+📎        }
+📎        .sheet(item: $importResult) { result in
+📎            ImportResultView(result: result, onDismiss: {
+📎                importResult = nil
+📎            }, onRetry: {
+📎                importResult = nil
+📎                showingImportDialog = true
+📎            })
+📎        }
+📎        .sheet(isPresented: $showingPressureCalibration) {
+📎            PressureCalibrationView()
+📎                .frame(width: 1200, height: 800)
+📎        }
+📎        .sheet(isPresented: $showingSFSymbolsPicker) {
+📎            SFSymbolsPickerView(
+📎                isPresented: $showingSFSymbolsPicker,
+📎                onImport: { tempURL in
+📎                    let result = await VectorImportManager.shared.importVectorFile(from: tempURL)
+📎                    result.dispatchAsImportCommand(into: document)
+📎                }
+📎            )
+📎        }
+📎        .onAppear {
+📎            if !hasInitializedTool {
+📎                document.viewState.currentTool = appState.defaultTool
+📎                hasInitializedTool = true
+📎            }
+📎            documentState.setDocument(document)
+📎            DispatchQueue.main.async {
+📎                if let window = self.viewWindow, window.isKeyWindow {
+📎                    AppEventMonitor.shared.setActiveDocument(document)
+📎                }
+📎            }
+📎            if let configured = appState.pendingNewDocument {
+📎                loadImportedDocument(configured)
+📎                appState.pendingNewDocument = nil
+📎            }
+📎        }
+📎        .onDisappear {
+📎        }
+📎        .focusedSceneObject(documentState)
+📎    }
+📎
+📎    private func loadImportedDocument(_ importedDoc: VectorDocument) {
+📎        document.settings = importedDoc.settings
+📎        document.snapshot.layers = importedDoc.snapshot.layers
+📎        document.colorSwatches = importedDoc.colorSwatches
+📎        document.documentColorDefaults = importedDoc.documentColorDefaults
+📎        document.selectedLayerIndex = importedDoc.selectedLayerIndex
+📎        document.viewState.selectedObjectIDs = importedDoc.viewState.selectedObjectIDs
+📎        document.viewState.currentTool = appState.defaultTool
+📎        document.viewState.viewMode = .color
+📎        document.gridSettings = importedDoc.gridSettings
+📎        calculateInitialZoom()
+📎    }
+📎
+📎    private func importVectorFile(from url: URL) {
+📎        showingImportProgress = true
+📎        Task {
+📎            let result = await VectorImportManager.shared.importVectorFile(from: url)
+📎            await MainActor.run {
+📎                showingImportProgress = false
+📎                if result.success {
+📎                    if result.dispatchAsImportCommand(into: document) != nil {
+📎                        document.viewState.selectedObjectIDs = Set(result.shapes.map { $0.id })
+📎                        calculateInitialZoom()
+📎                    }
+📎                } else {
+📎                    Log.error("❌ Import failed: \(result.errors.map { $0.localizedDescription }.joined(separator: ", "))", category: .error)
+📎                }
+📎                importResult = result
+📎            }
+📎        }
+📎    }
+📎
+📎    private func runPasteboardDiagnostics() {
+📎        let report = PasteboardDiagnostics.shared.runDiagnostics(on: document)
+📎        report.printSummary()
+📎        DispatchQueue.main.async {
+📎            let alert = NSAlert()
+📎            alert.messageText = "Pasteboard Diagnostics Complete"
+📎            alert.informativeText = report.overallPassed ?
+📎            "✅ All tests PASSED! Pasteboard is working correctly." :
+📎            "❌ Some tests FAILED. Check the console for detailed results."
+📎            alert.alertStyle = report.overallPassed ? .informational : .warning
+📎            alert.runModal()
+📎        }
+📎    }
+📎
+📎    private func calculateInitialZoom() {
+📎        document.requestZoom(to: 0.0, mode: .fitToPage)
+📎    }
+📎
+📎    private func hydrateGroupImagesRecursive(_ shape: VectorShape, in document: VectorDocument) {
+📎        if shape.embeddedImageData != nil || shape.linkedImagePath != nil || shape.linkedImageBookmarkData != nil {
+📎            ImageContentRegistry.hydrateImageIfAvailable(for: shape, in: document)
+📎        }
+📎        if shape.isGroup || shape.isClippingGroup {
+📎            for child in shape.groupedShapes {
+📎                hydrateGroupImagesRecursive(child, in: document)
+📎            }
+📎            for memberID in shape.memberIDs {
+📎                if let obj = document.snapshot.objects[memberID] {
+📎                    let childShape: VectorShape
+📎                    switch obj.objectType {
+📎                    case .shape(let s), .image(let s), .clipGroup(let s), .clipMask(let s), .group(let s), .warp(let s), .guide(let s):
+📎                        childShape = s
+📎                    case .text(let s):
+📎                        childShape = s
+📎                    }
+📎                    hydrateGroupImagesRecursive(childShape, in: document)
+📎                }
+📎            }
+📎        }
+📎    }
+📎}
+📎
+📎struct HostingWindowFinder: NSViewRepresentable {
+📎    var callback: (NSWindow?) -> Void
+📎
+📎    func makeNSView(context: Context) -> NSView {
+📎        let view = NSView()
+📎        DispatchQueue.main.async { [weak view] in
+📎            self.callback(view?.window)
+📎        }
+📎        return view
+📎    }
+📎
+📎    func updateNSView(_ nsView: NSView, context: Context) {}
+📎} of 442 lines
