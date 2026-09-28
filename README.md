@@ -242,3 +242,9 @@ All app code lives in `logos inkpen.io/` (an Xcode synchronized folder — add o
 ## License
 
 Copyright (c) 2025-2026 inkpen.io. All rights reserved.
+
+---
+
+**AgentiLoop:** [agentiloop.ai](https://agentiloop.ai/)
+
+Copyright © 2026 AgentiLoop.ai, a Logos InkPen LLC company. All rights reserved.
