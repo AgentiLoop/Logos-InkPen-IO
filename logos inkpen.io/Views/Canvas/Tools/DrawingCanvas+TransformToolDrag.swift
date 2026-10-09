@@ -250,6 +250,6 @@ extension DrawingCanvas {
             }
         }
         shape.updateBounds()
-        return shape
+        return shapeWithTransformedFillGradient(old: old, new: shape, combined: combined)
     }
 }
