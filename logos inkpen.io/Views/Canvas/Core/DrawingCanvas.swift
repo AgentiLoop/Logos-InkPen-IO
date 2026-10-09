@@ -115,6 +115,8 @@ struct DrawingCanvas: View {
     @State internal var selectionMarqueeRect: CGRect? = nil
     @State internal var selectionMarqueeBase: Set<UUID> = []
     @State internal var directSelectionDragEvaluated = false
+    @State internal var convertAnchorDragSession: ConvertAnchorDragSession? = nil
+    @State internal var convertAnchorDragEvaluated = false
     @State internal var liveZoomDelta: CGFloat = 1.0
     @State internal var livePanDelta: CGPoint = .zero
     @State internal var isActivelyZooming: Bool = false

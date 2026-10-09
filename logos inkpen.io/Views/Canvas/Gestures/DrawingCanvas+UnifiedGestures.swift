@@ -137,7 +137,14 @@ extension DrawingCanvas {
                 return
             }
             handleDirectSelectionDrag(value: value, geometry: geometry)
+        case .convertAnchorPoint:
+            handleConvertAnchorDrag(value: value, geometry: geometry)
         case .bezierPen:
+            if !isBezierDrawing && (convertAnchorDragSession != nil
+                || (NSEvent.modifierFlags.contains(.option) && !convertAnchorDragEvaluated
+                    && anchorExists(at: screenToCanvas(value.startLocation, geometry: geometry)))) {
+                if handleConvertAnchorDrag(value: value, geometry: geometry) { return }
+            }
             handleBezierPenDrag(value: value, geometry: geometry)
         case .freehand:
             let currentLocation = screenToCanvas(value.location, geometry: geometry)
@@ -203,7 +210,14 @@ extension DrawingCanvas {
                 return
             }
             finishDirectSelectionDrag()
+        case .convertAnchorPoint:
+            finishConvertAnchorDrag()
         case .bezierPen:
+            if convertAnchorDragSession != nil {
+                finishConvertAnchorDrag()
+                return
+            }
+            convertAnchorDragEvaluated = false
             finishBezierPenDrag()
         case .freehand:
             handleFreehandDragEnd()
