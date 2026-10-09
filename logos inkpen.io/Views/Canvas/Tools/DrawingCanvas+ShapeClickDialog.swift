@@ -30,13 +30,14 @@ extension DrawingCanvas {
         }
         func makeLabel(_ text: String) -> NSTextField {
             let label = NSTextField(labelWithString: text)
-            label.frame = NSRect(x: 0, y: 0, width: 76, height: 20)
+            label.frame = NSRect(x: 0, y: 0, width: 80, height: 20)
             return label
         }
 
-        let rows: [(String, Double)] = isBox
+        var rows: [(String, Double)] = isBox
             ? (isSquareLike ? [(tool == .circle ? "Diameter:" : "Size:", 100)] : [("Width:", 100), ("Height:", 100)])
             : [("Radius:", 50)]
+        if tool == .roundedRectangle { rows.append(("Corner Radius:", 20)) }
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 190, height: CGFloat(rows.count) * 28))
         var fields: [NSTextField] = []
         for (index, row) in rows.enumerated() {
@@ -72,7 +73,8 @@ extension DrawingCanvas {
                     .close
                 ], isClosed: true)
             case .roundedRectangle:
-                path = createRoundedRectPath(rect: rect, cornerRadius: 20.0)
+                let requested = values.count > 2 ? values[2] : 20.0
+                path = createRoundedRectPath(rect: rect, cornerRadius: min(requested, min(width, height) / 2))
             case .pill:
                 path = createRoundedRectPath(rect: rect, cornerRadius: min(width, height) / 2)
             case .circle:
