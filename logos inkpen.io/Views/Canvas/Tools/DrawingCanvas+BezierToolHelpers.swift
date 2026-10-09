@@ -75,6 +75,9 @@ extension DrawingCanvas {
             }
         }
         if !isBezierDrawing {
+            if NSEvent.modifierFlags.contains(.option) && handlePenOptionConvertAnchor(at: location) {
+                return
+            }
             if !isShiftPressed && handlePenAutoAddDeleteAnchor(at: location) {
                 return
             }

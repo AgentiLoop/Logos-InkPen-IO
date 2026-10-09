@@ -47,6 +47,18 @@ extension DrawingCanvas {
         return false
     }
 
+    /// Illustrator: holding Option over an anchor with the Pen tool temporarily acts as Convert Anchor Point
+    /// (smooth <-> corner). Returns true if the click hit an anchor or handle and was consumed.
+    func handlePenOptionConvertAnchor(at location: CGPoint) -> Bool {
+        let tolerance = max(2.0, 8.0 / zoomLevel)
+        if let result = restoreCollapsedHandlesIfClicked(at: location, tolerance: tolerance)
+            ?? collapseHandleIfClicked(at: location, tolerance: tolerance) {
+            enableDirectSelectionForConvertedPoint(shapeID: result.shapeID, elementIndex: result.elementIndex)
+            return true
+        }
+        return false
+    }
+
     private func insertPointOnSegment(shapeID: UUID, elementIndex: Int, at location: CGPoint) {
         guard let object = document.snapshot.objects[shapeID],
               case .shape(let shape) = object.objectType,
