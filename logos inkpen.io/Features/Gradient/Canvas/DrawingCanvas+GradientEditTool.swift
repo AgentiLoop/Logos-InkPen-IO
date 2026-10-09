@@ -127,16 +127,10 @@ extension DrawingCanvas {
                 canvasOffset: canvasOffset,
                 activeGradientDelta: activeGradientDelta,
                 onDragChanged: { value in
-                    if let selectedShape = getSelectedShapeWithGradient(),
-
-                       let selectedGradient = getSelectedShapeGradient(document: document) {
-                        handleGradientCenterDrag(value: value, geometry: geometry, shape: selectedShape, gradient: selectedGradient)
-                    }
+                    handleGradientToolDrag(value: value, geometry: geometry)
                 },
-                onDragEnded: { value in
-                    if let selectedShape = getSelectedShapeWithGradient() {
-                        handleGradientCenterDragEnd(value: value, geometry: geometry, shape: selectedShape)
-                    }
+                onDragEnded: { _ in
+                    finishGradientToolDrag()
                 }
             )
         }
