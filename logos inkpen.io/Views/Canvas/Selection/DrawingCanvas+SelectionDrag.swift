@@ -105,6 +105,16 @@ extension DrawingCanvas {
         }
     }
 
+    /// Illustrator: Shift while dragging constrains movement to multiples of 45 degrees.
+    private func constrainDeltaTo45Degrees(_ delta: CGPoint) -> CGPoint {
+        let length = hypot(delta.x, delta.y)
+        guard length > 0 else { return delta }
+        let step = CGFloat.pi / 4
+        let angle = (atan2(delta.y, delta.x) / step).rounded() * step
+        let projected = delta.x * cos(angle) + delta.y * sin(angle)
+        return CGPoint(x: projected * cos(angle), y: projected * sin(angle))
+    }
+
     internal func handleSelectionDrag(value: DragGesture.Value, geometry: GeometryProxy) {
         guard document.selectedLayerIndex != nil,
               !document.viewState.selectedObjectIDs.isEmpty else { return }
@@ -137,21 +147,7 @@ extension DrawingCanvas {
         )
         let isShiftCurrentlyPressed = isShiftPressed || NSEvent.modifierFlags.contains(.shift)
         if isShiftCurrentlyPressed {
-            if shiftConstraintAxis == .none {
-                if abs(cursorDelta.x) > abs(cursorDelta.y) {
-                    shiftConstraintAxis = .horizontal
-                } else if abs(cursorDelta.y) > abs(cursorDelta.x) {
-                    shiftConstraintAxis = .vertical
-                }
-            }
-            switch shiftConstraintAxis {
-            case .horizontal:
-                cursorDelta.y = 0
-            case .vertical:
-                cursorDelta.x = 0
-            case .none:
-                break
-            }
+            cursorDelta = constrainDeltaTo45Degrees(cursorDelta)
         } else {
             shiftConstraintAxis = .none
         }
@@ -178,13 +174,8 @@ extension DrawingCanvas {
                         y: snappedTopLeft.y + transformedBounds.height/2
                     )
                     canvasDelta = CGPoint(x: snappedCenter.x - initialCenter.x, y: snappedCenter.y - initialCenter.y)
-                    switch shiftConstraintAxis {
-                    case .horizontal:
-                        canvasDelta.y = 0
-                    case .vertical:
-                        canvasDelta.x = 0
-                    case .none:
-                        break
+                    if isShiftCurrentlyPressed {
+                        canvasDelta = constrainDeltaTo45Degrees(canvasDelta)
                     }
                 }
             }
