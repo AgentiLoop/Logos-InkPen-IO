@@ -172,6 +172,10 @@ extension DrawingCanvas {
             finishTextBoxDrawing(value: value, geometry: geometry)
             resetTextBoxDrawingState()
         case .selection:
+            if selectionMarqueeRect != nil {
+                finishSelectionMarquee(geometry: geometry)
+                return
+            }
             finishSelectionDrag()
             isDrawing = false
             if document.isHandleScalingActive {
@@ -208,6 +212,9 @@ extension DrawingCanvas {
             return
         }
         if isCornerRadiusEditMode {
+            return
+        }
+        if handleSelectionMarqueeDrag(value: value, geometry: geometry) {
             return
         }
         let startLocation = screenToCanvas(value.startLocation, geometry: geometry)
