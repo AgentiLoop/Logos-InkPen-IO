@@ -195,6 +195,9 @@ extension DrawingCanvas {
         }
         if document.viewState.currentTool == .cornerRadius {
             cornerRadiusTool(geometry: geometry)
+            if getSelectedRectangleShape() == nil {
+                polygonCornerRadiusTool(geometry: geometry)
+            }
         }
         if document.viewState.currentTool == .selection && isCornerRadiusEditMode {
             cornerRadiusEditTool(geometry: geometry)
