@@ -23,6 +23,11 @@ struct SelectionHandlesView: View {
 
     var body: some View {
         ZStack {
+            if DrawingCanvas.isTransformDragTool(document.viewState.currentTool),
+               !document.viewState.selectedObjectIDs.isEmpty,
+               let origin = document.transformToolOriginPoint() {
+                transformOriginMarker(at: origin)
+            }
             if !document.viewState.selectedObjectIDs.isEmpty {
                 if document.viewState.selectedObjectIDs.count > 1 {
                     renderCombinedSelectionBox()
@@ -256,6 +261,18 @@ struct SelectionHandlesView: View {
         combinedShape.bounds = CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
         combinedShape.transform = CGAffineTransform(translationX: bounds.origin.x, y: bounds.origin.y)
         return combinedShape
+    }
+
+    private func transformOriginMarker(at origin: CGPoint) -> some View {
+        ZStack {
+            Circle().stroke(Color.white, lineWidth: 3)
+            Circle().stroke(Color.blue, lineWidth: 1.5)
+            Rectangle().fill(Color.blue).frame(width: 1.5, height: 18)
+            Rectangle().fill(Color.blue).frame(width: 18, height: 1.5)
+        }
+        .frame(width: 14, height: 14)
+        .position(x: origin.x * zoomLevel + canvasOffset.x, y: origin.y * zoomLevel + canvasOffset.y)
+        .allowsHitTesting(false)
     }
 
     @ViewBuilder

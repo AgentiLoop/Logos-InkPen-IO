@@ -36,7 +36,14 @@ extension DrawingCanvas {
             cancelBezierDrawing()
         }
         switch document.viewState.currentTool {
-        case .selection, .scale, .rotate, .reflect, .shear, .warp:
+        case .scale, .rotate, .reflect, .shear:
+            let previousSelection = document.viewState.selectedObjectIDs
+            handleSelectionTap(at: canvasLocation)
+            if !previousSelection.isEmpty && document.viewState.selectedObjectIDs.isEmpty {
+                document.viewState.selectedObjectIDs = previousSelection
+                document.viewState.transformToolOrigin = canvasLocation
+            }
+        case .selection, .warp:
             handleSelectionTap(at: canvasLocation)
         case .directSelection:
             handleDirectSelectionTap(at: canvasLocation)
@@ -135,7 +142,9 @@ extension DrawingCanvas {
             handleBrushDragUpdate(at: currentLocation)
         case .marker:
             break
-        case .scale, .rotate, .reflect, .shear, .warp:
+        case .scale, .rotate, .reflect, .shear:
+            handleTransformToolDrag(value: value, geometry: geometry)
+        case .warp:
             break
         default:
             break
@@ -176,6 +185,8 @@ extension DrawingCanvas {
             handleBrushDragEnd()
         case .marker:
             break
+        case .scale, .rotate, .reflect, .shear:
+            finishTransformToolDrag()
         default:
             break
         }

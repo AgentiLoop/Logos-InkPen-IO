@@ -9,11 +9,15 @@ class DocumentViewState: ObservableObject {
             if currentTool == .selection || currentTool == .directSelection {
                 lastSelectionTool = currentTool
             }
+            if transformToolOrigin != nil { transformToolOrigin = nil }
         }
     }
 
     /// Selection tool that Cmd switches to temporarily from other tools (Illustrator: last used of Selection / Direct Selection).
     var lastSelectionTool: DrawingTool = .selection
+
+    /// Reference point set by clicking with Rotate / Scale / Reflect / Shear (nil = centre of the selection).
+    @Published var transformToolOrigin: CGPoint? = nil
 
     @Published var scalingAnchor: ScalingAnchor = .center
     @Published var rotationAnchor: RotationAnchor = .center
@@ -43,6 +47,7 @@ class DocumentViewState: ObservableObject {
     var selectedObjectIDs: Set<UUID> = [] {
         didSet {
             PublishedSelectedObjectIDs = selectedObjectIDs
+            if transformToolOrigin != nil && selectedObjectIDs != oldValue { transformToolOrigin = nil }
             orderedSelectedObjectIDs = orderedSelectedObjectIDs.filter { selectedObjectIDs.contains($0) }
         }
     }
