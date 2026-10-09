@@ -5,6 +5,16 @@ extension DrawingCanvas {
 
     internal func handleDoubleClick(at location: CGPoint, geometry: GeometryProxy) {
         let canvasLocation = screenToCanvas(location, geometry: geometry)
+        switch document.viewState.currentTool {
+        case .hand:
+            fitToPage(geometry: geometry)
+            return
+        case .zoom:
+            actualSize(geometry: geometry)
+            return
+        default:
+            break
+        }
         if let textID = findTextAt(location: canvasLocation) {
             document.viewState.currentTool = .font
             startEditingText(textID: textID, at: canvasLocation)
