@@ -99,25 +99,30 @@ extension VectorDocument {
         for (shapeID, pointIDs) in pointsByShape {
             guard var shape = findShape(by: shapeID) else { continue }
             var elements = shape.path.elements
-            for pointID in pointIDs {
-                guard pointID.elementIndex < elements.count else { continue }
-                let element = elements[pointID.elementIndex]
-                switch element {
+            let selectedIndices = Set(pointIDs.map { $0.elementIndex })
+            func moved(_ p: VectorPoint) -> VectorPoint {
+                VectorPoint(p.x + nudgeAmount.dx, p.y + nudgeAmount.dy)
+            }
+            // An anchor carries its incoming handle (control2 of its own element) and its
+            // outgoing handle (control1 of the next element), like Illustrator.
+            for index in 0..<elements.count {
+                let anchorSelected = selectedIndices.contains(index)
+                let previousSelected = selectedIndices.contains(index - 1)
+                switch elements[index] {
                 case .move(let to):
-                    elements[pointID.elementIndex] = .move(to: VectorPoint(to.x + nudgeAmount.dx, to.y + nudgeAmount.dy))
+                    if anchorSelected { elements[index] = .move(to: moved(to)) }
                 case .line(let to):
-                    elements[pointID.elementIndex] = .line(to: VectorPoint(to.x + nudgeAmount.dx, to.y + nudgeAmount.dy))
+                    if anchorSelected { elements[index] = .line(to: moved(to)) }
                 case .curve(let to, let c1, let c2):
-                    elements[pointID.elementIndex] = .curve(
-                        to: VectorPoint(to.x + nudgeAmount.dx, to.y + nudgeAmount.dy),
-                        control1: VectorPoint(c1.x + nudgeAmount.dx, c1.y + nudgeAmount.dy),
-                        control2: VectorPoint(c2.x + nudgeAmount.dx, c2.y + nudgeAmount.dy)
+                    elements[index] = .curve(
+                        to: anchorSelected ? moved(to) : to,
+                        control1: previousSelected ? moved(c1) : c1,
+                        control2: anchorSelected ? moved(c2) : c2
                     )
                 case .quadCurve(let to, let c):
-                    elements[pointID.elementIndex] = .quadCurve(
-                        to: VectorPoint(to.x + nudgeAmount.dx, to.y + nudgeAmount.dy),
-                        control: VectorPoint(c.x + nudgeAmount.dx, c.y + nudgeAmount.dy)
-                    )
+                    if anchorSelected || previousSelected {
+                        elements[index] = .quadCurve(to: anchorSelected ? moved(to) : to, control: moved(c))
+                    }
                 case .close:
                     break
                 }
