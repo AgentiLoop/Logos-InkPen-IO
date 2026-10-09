@@ -70,7 +70,6 @@ extension DrawingCanvas {
         processFreehandPath()
         freehandPreviewPath = nil
         cancelFreehandDrawing()
-        document.viewState.selectedObjectIDs.removeAll()
     }
 
     private func updateFreehandPreview(smoothedLocation: CGPoint? = nil) {
@@ -124,7 +123,7 @@ extension DrawingCanvas {
             )
             elements.append(contentsOf: curveSegments)
         }
-        if ApplicationSettings.shared.freehandClosePath {
+        if ApplicationSettings.shared.freehandClosePath || NSEvent.modifierFlags.contains(.option) {
             elements.append(.close)
         }
         return VectorPath(elements: elements)
