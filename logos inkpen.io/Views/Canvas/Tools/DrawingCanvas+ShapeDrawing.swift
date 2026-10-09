@@ -971,6 +971,11 @@ extension DrawingCanvas {
     }
 
     internal func finishShapeDrawing(value: DragGesture.Value, geometry: GeometryProxy) {
+        commitCurrentShapePath()
+    }
+
+    /// Turns `currentPath` into a document shape using the current tool and default styles.
+    internal func commitCurrentShapePath() {
         guard let path = currentPath else { return }
         let strokeStyle = StrokeStyle(
             color: document.defaultStrokeColor,

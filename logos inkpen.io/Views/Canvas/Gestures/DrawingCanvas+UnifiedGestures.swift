@@ -76,6 +76,7 @@ extension DrawingCanvas {
         case .line, .rectangle, .square, .roundedRectangle, .pill, .circle, .ellipse, .oval, .egg, .cone, .star, .polygon, .pentagon, .hexagon, .heptagon, .octagon, .nonagon, .equilateralTriangle, .isoscelesTriangle, .rightTriangle, .acuteTriangle:
             if !isShiftPressed && !isCommandPressed {
                 document.viewState.selectedObjectIDs = []
+                showShapeSizeDialog(at: canvasLocation)
             }
         case .zoom:
             #if os(macOS)
