@@ -3,8 +3,18 @@ import SwiftUI
 func deletePointsFromPath(_ path: VectorPath, selectedPoints: [PointID]) -> VectorPath {
     var elements = path.elements
 
-    let indicesToDelete = Set(selectedPoints.map { $0.elementIndex }).sorted(by: >)
-    for index in indicesToDelete {
+    var indicesToDelete = Set(selectedPoints.map { $0.elementIndex })
+    if let lastIndex = closedPathDuplicateEndpointIndex(in: elements),
+       indicesToDelete.contains(0) || indicesToDelete.contains(lastIndex),
+       canDeleteElement(at: 0, in: elements),
+       let rotated = removingClosedPathStartAnchor(from: elements) {
+        // Both ends of a closed path are the same anchor; deleting it removes the pair and merges its two segments.
+        elements = rotated
+        indicesToDelete = Set(indicesToDelete.compactMap { index in
+            (index == 0 || index == lastIndex) ? nil : index - 1
+        })
+    }
+    for index in indicesToDelete.sorted(by: >) {
         if index < elements.count {
             if canDeleteElement(at: index, in: elements) {
                 elements = removingAnchor(at: index, from: elements)
@@ -13,6 +23,32 @@ func deletePointsFromPath(_ path: VectorPath, selectedPoints: [PointID]) -> Vect
     }
     let validatedElements = validatePathElements(elements)
     return VectorPath(elements: validatedElements, isClosed: path.isClosed)
+}
+
+/// Index of the last drawn point when a single closed sub-path ends exactly where it starts (the closing anchor is stored twice).
+func closedPathDuplicateEndpointIndex(in elements: [PathElement]) -> Int? {
+    guard elements.count >= 4, case .move(let start) = elements[0],
+          elements.contains(where: { if case .close = $0 { return true } else { return false } }),
+          !elements.dropFirst().contains(where: isMove) else { return nil }
+    guard let lastIndex = elements.lastIndex(where: { if case .close = $0 { return false } else { return true } }),
+          lastIndex >= 3, let end = elements[lastIndex].endpoint,
+          start.distance(to: end) <= 0.1 else { return nil }
+    return lastIndex
+}
+
+/// Deletes the start anchor of a closed path whose closing point duplicates it: the segment into the anchor and the segment out of it
+/// merge into one, and the next anchor becomes the new start. Returns nil if the path does not have that shape.
+func removingClosedPathStartAnchor(from elements: [PathElement]) -> [PathElement]? {
+    guard let lastIndex = closedPathDuplicateEndpointIndex(in: elements),
+          let anchorBefore = elements[lastIndex - 1].endpoint,
+          let newStart = elements[1].endpoint else { return nil }
+    let pair = removingAnchor(at: 1, from: [.move(to: anchorBefore), elements[lastIndex], elements[1]])
+    guard pair.count == 2 else { return nil }
+    var result: [PathElement] = [.move(to: newStart)]
+    result.append(contentsOf: elements[2..<lastIndex])
+    result.append(pair[1])
+    result.append(contentsOf: elements[(lastIndex + 1)...])
+    return result
 }
 
 func canDeleteElement(at index: Int, in elements: [PathElement]) -> Bool {

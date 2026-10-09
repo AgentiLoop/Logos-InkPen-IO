@@ -178,6 +178,22 @@ extension DrawingCanvas {
               case .shape(let shape) = object.objectType else { return }
         let elements = shape.path.elements
         guard pointID.elementIndex < elements.count else { return }
+        if let lastIndex = closedPathDuplicateEndpointIndex(in: elements),
+           pointID.elementIndex == 0 || pointID.elementIndex == lastIndex {
+            let oldPath = shape.path
+            let distinctAnchors = elements.filter { if case .close = $0 { return false } else { return true } }.count - 1
+            if distinctAnchors <= 2 {
+                document.removeShapeFromUnifiedSystem(id: shape.id)
+            } else if let rotated = removingClosedPathStartAnchor(from: elements) {
+                let newPath = VectorPath(elements: rotated, isClosed: shape.path.isClosed)
+                document.updateShapeByID(pointID.shapeID) { shape in
+                    shape.path = newPath
+                    shape.updateBounds()
+                }
+                document.commandManager.execute(ModifyPathCommand(objectID: shape.id, oldPath: oldPath, newPath: newPath))
+            }
+            return
+        }
         let closedPathEndpoints = findClosedPathEndpoints(for: pointID)
         if !closedPathEndpoints.isEmpty {
             NSSound.beep()
