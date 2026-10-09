@@ -47,6 +47,8 @@ extension DrawingCanvas {
                 return
             }
             isDrawing = true
+            document.viewState.isShapeDrawingInProgress = true
+            document.viewState.lastShapeDragLocation = value.startLocation
             shapeDragStart = value.startLocation
             var initialPoint = startLocation
 
@@ -59,6 +61,15 @@ extension DrawingCanvas {
                 initialPoint = applySnapping(to: initialPoint)
             }
             shapeStartPoint = initialPoint
+            drawingStartPoint = shapeStartPoint
+        }
+        // Space held mid-drag: move the whole shape with the cursor instead of resizing it (Illustrator).
+        let previousDragLocation = document.viewState.lastShapeDragLocation ?? value.location
+        document.viewState.lastShapeDragLocation = value.location
+        if document.viewState.isSpaceHeldDuringShapeDrag {
+            let moveDelta = CGPoint(x: value.location.x - previousDragLocation.x, y: value.location.y - previousDragLocation.y)
+            shapeDragStart = CGPoint(x: shapeDragStart.x + moveDelta.x, y: shapeDragStart.y + moveDelta.y)
+            shapeStartPoint = CGPoint(x: shapeStartPoint.x + moveDelta.x / Double(zoomLevel), y: shapeStartPoint.y + moveDelta.y / Double(zoomLevel))
             drawingStartPoint = shapeStartPoint
         }
         let cursorDelta = CGPoint(
@@ -87,9 +98,17 @@ extension DrawingCanvas {
         guard let startPoint = drawingStartPoint else { return }
         switch document.viewState.currentTool {
         case .line:
+            var lineEnd = currentLocation
+            if isShiftPressed || NSEvent.modifierFlags.contains(.shift) {
+                let dx = lineEnd.x - startPoint.x
+                let dy = lineEnd.y - startPoint.y
+                let length = hypot(dx, dy)
+                let snappedAngle = (atan2(dy, dx) / (.pi / 4)).rounded() * (.pi / 4)
+                lineEnd = CGPoint(x: startPoint.x + length * cos(snappedAngle), y: startPoint.y + length * sin(snappedAngle))
+            }
             currentPath = VectorPath(elements: [
                 .move(to: VectorPoint(startPoint)),
-                .line(to: VectorPoint(currentLocation))
+                .line(to: VectorPoint(lineEnd))
             ])
         case .rectangle:
             var width = currentLocation.x - startPoint.x
@@ -971,27 +990,7 @@ extension DrawingCanvas {
         let shapeName = shapeGeometricType?.rawValue ?? document.viewState.currentTool.rawValue
         if document.viewState.currentTool == .rectangle || document.viewState.currentTool == .square ||
            document.viewState.currentTool == .roundedRectangle || document.viewState.currentTool == .pill {
-            let startPoint = shapeStartPoint
-            let currentLocation = screenToCanvas(value.location, geometry: geometry)
-            let originalBounds: CGRect
-            if document.viewState.currentTool == .square {
-                let dragDeltaX = currentLocation.x - startPoint.x
-                let dragDeltaY = currentLocation.y - startPoint.y
-                let size = max(abs(dragDeltaX), abs(dragDeltaY))
-                originalBounds = CGRect(
-                    x: startPoint.x,
-                    y: startPoint.y,
-                    width: dragDeltaX >= 0 ? size : -size,
-                    height: dragDeltaY >= 0 ? size : -size
-                )
-            } else {
-                originalBounds = CGRect(
-                    x: min(startPoint.x, currentLocation.x),
-                    y: min(startPoint.y, currentLocation.y),
-                    width: abs(currentLocation.x - startPoint.x),
-                    height: abs(currentLocation.y - startPoint.y)
-                )
-            }
+            let originalBounds = path.cgPath.boundingBoxOfPath
             let initialRadius: Double
             let cornerRadii: [Double]
             switch document.viewState.currentTool {

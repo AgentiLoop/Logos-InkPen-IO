@@ -19,6 +19,11 @@ class DocumentViewState: ObservableObject {
     /// Reference point set by clicking with Rotate / Scale / Reflect / Shear (nil = centre of the selection).
     @Published var transformToolOrigin: CGPoint? = nil
 
+    /// True while a shape tool is mid-drag; Space then repositions the shape instead of switching to the Hand tool (Illustrator).
+    var isShapeDrawingInProgress: Bool = false
+    var isSpaceHeldDuringShapeDrag: Bool = false
+    var lastShapeDragLocation: CGPoint? = nil
+
     @Published var scalingAnchor: ScalingAnchor = .center
     @Published var rotationAnchor: RotationAnchor = .center
     @Published var shearAnchor: ShearAnchor = .center

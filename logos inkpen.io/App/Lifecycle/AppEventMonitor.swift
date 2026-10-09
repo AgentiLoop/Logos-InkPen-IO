@@ -92,6 +92,10 @@ final class AppEventMonitor {
         if event.type == .keyDown,
            let characters = event.charactersIgnoringModifiers,
            characters == " " {
+            if activeDoc.viewState.isShapeDrawingInProgress {
+                activeDoc.viewState.isSpaceHeldDuringShapeDrag = true
+                return nil
+            }
             if !isSpacebarPressed && temporaryTool == nil {
                 isSpacebarPressed = true
                 previousTool = activeDoc.viewState.currentTool
@@ -103,6 +107,7 @@ final class AppEventMonitor {
         if event.type == .keyUp,
            let characters = event.charactersIgnoringModifiers,
            characters == " " {
+            activeDoc.viewState.isSpaceHeldDuringShapeDrag = false
             isSpacebarPressed = false
             if let previous = previousTool, (temporaryTool == .hand || temporaryTool == .zoom) {
                 activeDoc.viewState.currentTool = previous

@@ -247,6 +247,9 @@ extension DrawingCanvas {
         currentDrawingPoints.removeAll()
         shapeDragStart = CGPoint.zero
         shapeStartPoint = CGPoint.zero
+        document.viewState.isShapeDrawingInProgress = false
+        document.viewState.isSpaceHeldDuringShapeDrag = false
+        document.viewState.lastShapeDragLocation = nil
     }
 
     private func startEyedropperColorPick() {
