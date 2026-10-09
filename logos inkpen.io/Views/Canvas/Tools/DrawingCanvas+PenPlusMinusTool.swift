@@ -372,10 +372,6 @@ extension DrawingCanvas {
     }
 
     private func deletePointWithCurveMerging(elements: [PathElement], pointIndex: Int) -> [PathElement] {
-        var newElements = elements
-        newElements.remove(at: pointIndex)
-        if pointIndex > 0 && pointIndex < elements.count {
-        }
-        return newElements
+        return removingAnchor(at: pointIndex, from: elements)
     }
 }
