@@ -710,14 +710,23 @@ extension DrawingCanvas {
             x: currentLocation.x - activeLocation.x,
             y: currentLocation.y - activeLocation.y
         )
-        let control1 = VectorPoint(
-            activeLocation.x - dragVector.x * 0.5,
-            activeLocation.y - dragVector.y * 0.5
-        )
+        // Illustrator: the outgoing handle follows the cursor and the incoming
+        // handle mirrors it. Holding Option breaks the pair: the incoming handle
+        // stays where it was and only the outgoing handle moves.
         let control2 = VectorPoint(
-            activeLocation.x + dragVector.x * 0.5,
-            activeLocation.y + dragVector.y * 0.5
+            activeLocation.x + dragVector.x,
+            activeLocation.y + dragVector.y
         )
+        let control1: VectorPoint
+        if NSEvent.modifierFlags.contains(.option) {
+            control1 = liveBezierHandles[activeIndex]?.control1
+                ?? VectorPoint(activeLocation.x, activeLocation.y)
+        } else {
+            control1 = VectorPoint(
+                activeLocation.x - dragVector.x,
+                activeLocation.y - dragVector.y
+            )
+        }
         liveBezierHandles[activeIndex] = BezierHandleInfo(
             control1: control1,
             control2: control2,
