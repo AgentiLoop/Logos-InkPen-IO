@@ -91,7 +91,9 @@ extension DrawingCanvas {
             }
             #endif
         case .eyedropper:
-            startEyedropperColorPick()
+            if isShiftPressed || !applyEyedropperObjectAppearance(at: canvasLocation) {
+                startEyedropperColorPick()
+            }
         case .selectSameColor:
             selectSameColorAt(canvasLocation)
         default:
