@@ -686,7 +686,7 @@ extension DrawingCanvas {
         }
     }
 
-    private func findCurveSegmentInSelectedShapes(at location: CGPoint, tolerance: Double) -> (shapeID: UUID, elementIndex: Int)? {
+    internal func findCurveSegmentInSelectedShapes(at location: CGPoint, tolerance: Double) -> (shapeID: UUID, elementIndex: Int)? {
         for objectID in selectedObjectIDs {
             guard let object = document.snapshot.objects[objectID],
                   case .shape(let shape) = object.objectType,

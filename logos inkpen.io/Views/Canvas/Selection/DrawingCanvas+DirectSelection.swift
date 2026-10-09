@@ -186,7 +186,7 @@ extension DrawingCanvas {
         return true
     }
 
-    private func findShapeAtLocationForDirectSelect(at location: CGPoint) -> VectorShape? {
+    internal func findShapeAtLocationForDirectSelect(at location: CGPoint) -> VectorShape? {
         var bestHit: (shape: VectorShape, zOrder: Int)? = nil
         for (layerIndex, layer) in document.snapshot.layers.enumerated().reversed() {
             if layer.isLocked { continue }

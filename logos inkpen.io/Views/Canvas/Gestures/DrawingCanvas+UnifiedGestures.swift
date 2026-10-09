@@ -121,6 +121,9 @@ extension DrawingCanvas {
         case .selection:
             handleUnifiedSelectionDrag(value: value, geometry: geometry)
         case .directSelection:
+            if handleDirectSelectionMarqueeDrag(value: value, geometry: geometry) {
+                return
+            }
             handleDirectSelectionDrag(value: value, geometry: geometry)
         case .bezierPen:
             handleBezierPenDrag(value: value, geometry: geometry)
@@ -182,6 +185,11 @@ extension DrawingCanvas {
                 document.isHandleScalingActive = false
             }
         case .directSelection:
+            directSelectionDragEvaluated = false
+            if selectionMarqueeRect != nil {
+                finishDirectSelectionMarquee(geometry: geometry)
+                return
+            }
             finishDirectSelectionDrag()
         case .bezierPen:
             finishBezierPenDrag()

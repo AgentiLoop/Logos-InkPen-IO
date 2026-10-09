@@ -164,7 +164,7 @@ extension DrawingCanvas {
                 .position(x: marquee.midX, y: marquee.midY)
                 .allowsHitTesting(false)
         }
-        if let marquee = selectionMarqueeRect, document.viewState.currentTool == .selection {
+        if let marquee = selectionMarqueeRect, document.viewState.currentTool == .selection || document.viewState.currentTool == .directSelection {
             Rectangle()
                 .stroke(Color.black, style: SwiftUI.StrokeStyle(lineWidth: 1, dash: [4, 3]))
                 .background(Rectangle().fill(Color.blue.opacity(0.08)))
