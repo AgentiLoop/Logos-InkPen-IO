@@ -34,8 +34,12 @@ extension DrawingCanvas {
                             geometry: geometry
                         )
                     }
-                    .onEnded { _ in
-                        finishCornerRadiusToolDrag()
+                    .onEnded { value in
+                        if isDraggingCorner {
+                            finishCornerRadiusToolDrag()
+                        } else if hypot(value.translation.width, value.translation.height) < 3 {
+                            handleSelectionTap(at: screenToCanvas(value.location, geometry: geometry))
+                        }
                     }
             )
         }
@@ -136,8 +140,9 @@ extension DrawingCanvas {
         if let originalBounds = currentShape.originalBounds {
             let maxRadius = min(originalBounds.width, originalBounds.height) / 2.0
             let newRadius = max(0.0, min(maxRadius, tentativeRadius))
-            let isShiftCurrentlyPressed = isShiftPressed || NSEvent.modifierFlags.contains(.shift)
-            if isShiftCurrentlyPressed {
+            let flags = NSEvent.modifierFlags
+            let editsSingleCorner = flags.contains(.command) || flags.contains(.option)
+            if !editsSingleCorner {
                 let originalRadius = originalCornerRadii[safe: cornerIndex] ?? 0.0
                 if originalRadius > 0 {
                     let ratio = newRadius / originalRadius

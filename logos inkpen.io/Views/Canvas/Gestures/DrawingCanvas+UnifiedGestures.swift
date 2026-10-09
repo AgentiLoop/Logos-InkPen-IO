@@ -57,7 +57,7 @@ extension DrawingCanvas {
                 document.viewState.selectedObjectIDs = previousSelection
                 document.viewState.transformToolOrigin = canvasLocation
             }
-        case .selection, .warp:
+        case .selection, .warp, .cornerRadius:
             handleSelectionTap(at: canvasLocation)
         case .directSelection:
             handleDirectSelectionTap(at: canvasLocation)
