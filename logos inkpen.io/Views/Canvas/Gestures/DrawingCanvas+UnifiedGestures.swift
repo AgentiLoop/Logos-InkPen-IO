@@ -106,6 +106,9 @@ extension DrawingCanvas {
             }
             #endif
         case .eyedropper:
+            if isOptionPressed && !isShiftPressed && applySelectedAppearanceToObject(at: canvasLocation) {
+                break
+            }
             if isShiftPressed || !applyEyedropperObjectAppearance(at: canvasLocation) {
                 startEyedropperColorPick()
             }

@@ -30,6 +30,21 @@ extension DrawingCanvas {
         return true
     }
 
+    /// Illustrator: Option-click with the Eyedropper applies the appearance of the selected object
+    /// to the object under the cursor (the selection stays unchanged). Returns false if not applicable.
+    internal func applySelectedAppearanceToObject(at location: CGPoint) -> Bool {
+        guard let sourceID = document.viewState.selectedObjectIDs.first,
+              let source = document.findShape(by: sourceID),
+              let target = topmostSampleableShape(at: location),
+              !document.viewState.selectedObjectIDs.contains(target.id) else { return false }
+        var newTarget = target
+        newTarget.fillStyle = source.fillStyle
+        newTarget.strokeStyle = source.strokeStyle
+        document.executeCommand(ShapeModificationCommand(objectIDs: [target.id], oldShapes: [target.id: target], newShapes: [target.id: newTarget]))
+        document.viewState.objectPositionUpdateTrigger.toggle()
+        return true
+    }
+
     private func topmostSampleableShape(at location: CGPoint) -> VectorShape? {
         for layerIndex in stride(from: document.snapshot.layers.count - 1, through: 0, by: -1) {
             let layer = document.snapshot.layers[layerIndex]
