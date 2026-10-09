@@ -125,8 +125,13 @@ struct InkPenHelpContent {
                 <tr><td>Direct Selection</td><td>A</td></tr>
                 <tr><td>Pen</td><td>P</td></tr>
                 <tr><td>Text</td><td>T</td></tr>
-                <tr><td>Rectangle</td><td>R</td></tr>
-                <tr><td>Ellipse</td><td>E</td></tr>
+                <tr><td>Freehand</td><td>N</td></tr>
+                <tr><td>Line</td><td>\\</td></tr>
+                <tr><td>Rectangle</td><td>M</td></tr>
+                <tr><td>Ellipse</td><td>L</td></tr>
+                <tr><td>Rotate</td><td>R</td></tr>
+                <tr><td>Reflect</td><td>O</td></tr>
+                <tr><td>Scale</td><td>S</td></tr>
             </table>
             """
         )

@@ -521,17 +521,17 @@ struct logos_inken_ioApp: App {
                     Button("Selection Tool") {
                         documentState?.switchToTool(.selection)
                     }
-                    .keyboardShortcut("a", modifiers: [])
+                    .keyboardShortcut("v", modifiers: [])
                     .help("Switch to selection tool")
                     Button("Direct Selection Tool") {
                         documentState?.switchToTool(.directSelection)
                     }
-                    .keyboardShortcut("d", modifiers: [])
+                    .keyboardShortcut("a", modifiers: [])
                     .help("Switch to direct selection tool")
                     Button("Convert Anchor Point Tool") {
                         documentState?.switchToTool(.convertAnchorPoint)
                     }
-                    .keyboardShortcut("c", modifiers: [])
+                    .keyboardShortcut("c", modifiers: [.shift])
                     .help("Switch to convert anchor point tool")
                     Divider()
                     Button("Scale Tool") {
@@ -544,15 +544,20 @@ struct logos_inken_ioApp: App {
                     }
                     .keyboardShortcut("r", modifiers: [])
                     .help("Switch to rotate tool")
+                    Button("Reflect Tool") {
+                        documentState?.switchToTool(.reflect)
+                    }
+                    .keyboardShortcut("o", modifiers: [])
+                    .help("Switch to reflect tool")
                     Button("Shear Tool") {
                         documentState?.switchToTool(.shear)
                     }
-                    .keyboardShortcut("x", modifiers: [])
+                    .keyboardShortcut("x", modifiers: [.option])
                     .help("Switch to shear tool")
                     Button("Warp Tool") {
                         documentState?.switchToTool(.warp)
                     }
-                    .keyboardShortcut("w", modifiers: [])
+                    .keyboardShortcut("r", modifiers: [.shift])
                     .help("Switch to warp tool")
                     Divider()
                     Button("Bezier Pen Tool") {
@@ -563,7 +568,7 @@ struct logos_inken_ioApp: App {
                     Button("Freehand Tool") {
                         documentState?.switchToTool(.freehand)
                     }
-                    .keyboardShortcut("f", modifiers: [])
+                    .keyboardShortcut("n", modifiers: [])
                     .help("Switch to freehand tool")
                     Button("Brush Tool") {
                         documentState?.switchToTool(.brush)
@@ -573,7 +578,7 @@ struct logos_inken_ioApp: App {
                     Button("Marker Tool") {
                         documentState?.switchToTool(.marker)
                     }
-                    .keyboardShortcut("m", modifiers: [])
+                    .keyboardShortcut("b", modifiers: [.shift])
                     .help("Switch to marker tool")
                     Button("Font Tool") {
                         documentState?.switchToTool(.font)
@@ -584,12 +589,12 @@ struct logos_inken_ioApp: App {
                     Button("Line Tool") {
                         documentState?.switchToTool(.line)
                     }
-                    .keyboardShortcut("l", modifiers: [])
+                    .keyboardShortcut("\\", modifiers: [])
                     .help("Switch to line tool")
                     Button("Rectangle Tool") {
                         documentState?.switchToTool(.rectangle)
                     }
-                    .keyboardShortcut("r", modifiers: [.option])
+                    .keyboardShortcut("m", modifiers: [])
                     .help("Switch to rectangle tool")
                     Button("Square Tool") {
                         documentState?.switchToTool(.square)
@@ -614,12 +619,12 @@ struct logos_inken_ioApp: App {
                     Button("Ellipse Tool") {
                         documentState?.switchToTool(.ellipse)
                     }
-                    .keyboardShortcut("e", modifiers: [])
+                    .keyboardShortcut("l", modifiers: [])
                     .help("Switch to ellipse tool")
                     Button("Oval Tool") {
                         documentState?.switchToTool(.oval)
                     }
-                    .keyboardShortcut("o", modifiers: [])
+                    .keyboardShortcut("o", modifiers: [.shift])
                     .help("Switch to oval tool")
                     Button("Egg Tool") {
                         documentState?.switchToTool(.egg)
