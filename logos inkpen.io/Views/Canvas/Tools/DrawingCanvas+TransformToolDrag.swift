@@ -47,7 +47,7 @@ extension DrawingCanvas {
         return tool == .rotate || tool == .scale || tool == .reflect || tool == .shear
     }
 
-    private func makeTransformSession() -> TransformToolSession? {
+    internal func makeTransformSession() -> TransformToolSession? {
         guard let origin = document.transformToolOriginPoint() else { return nil }
         var ids: [UUID] = []
         var oldShapes: [UUID: VectorShape] = [:]
@@ -169,7 +169,7 @@ extension DrawingCanvas {
             .concatenating(CGAffineTransform(translationX: o.x, y: o.y))
     }
 
-    private func applyTransform(_ transform: CGAffineTransform, to session: TransformToolSession) {
+    internal func applyTransform(_ transform: CGAffineTransform, to session: TransformToolSession) {
         var affectedLayers = Set<Int>()
         for id in session.ids {
             guard let old = session.oldShapes[id] else { continue }
@@ -185,7 +185,7 @@ extension DrawingCanvas {
         document.triggerLayerUpdates(for: affectedLayers)
     }
 
-    private func commitTransform(_ session: TransformToolSession) {
+    internal func commitTransform(_ session: TransformToolSession) {
         var newShapes: [UUID: VectorShape] = [:]
         for id in session.ids {
             if let shape = document.findShape(by: id) { newShapes[id] = shape }

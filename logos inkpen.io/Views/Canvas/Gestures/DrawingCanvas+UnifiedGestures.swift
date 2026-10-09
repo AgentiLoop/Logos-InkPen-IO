@@ -47,6 +47,10 @@ extension DrawingCanvas {
         }
         switch document.viewState.currentTool {
         case .scale, .rotate, .reflect, .shear:
+            if isOptionPressed && !document.viewState.selectedObjectIDs.isEmpty {
+                showTransformToolDialog(at: canvasLocation)
+                return
+            }
             let previousSelection = document.viewState.selectedObjectIDs
             handleSelectionTap(at: canvasLocation)
             if !previousSelection.isEmpty && document.viewState.selectedObjectIDs.isEmpty {
