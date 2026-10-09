@@ -6,8 +6,14 @@ class DocumentViewState: ObservableObject {
     @Published var currentTool: DrawingTool = .brush {
         didSet {
             UserDefaults.standard.set(currentTool.rawValue, forKey: "lastUsedTool")
+            if currentTool == .selection || currentTool == .directSelection {
+                lastSelectionTool = currentTool
+            }
         }
     }
+
+    /// Selection tool that Cmd switches to temporarily from other tools (Illustrator: last used of Selection / Direct Selection).
+    var lastSelectionTool: DrawingTool = .selection
 
     @Published var scalingAnchor: ScalingAnchor = .center
     @Published var rotationAnchor: RotationAnchor = .center

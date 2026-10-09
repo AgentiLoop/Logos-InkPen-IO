@@ -121,12 +121,14 @@ final class AppEventMonitor {
                 temporaryTool = .hand
                 activeDoc.viewState.currentTool = .hand
             }
-            else if cmdPressed && !isSpacebarPressed && activeDoc.viewState.currentTool != .selection && temporaryTool == nil {
+            else if cmdPressed && !isSpacebarPressed && temporaryTool == nil
+                        && activeDoc.viewState.currentTool != .selection && activeDoc.viewState.currentTool != .directSelection {
+                let selectionTool = activeDoc.viewState.lastSelectionTool
                 previousTool = activeDoc.viewState.currentTool
-                temporaryTool = .selection
-                activeDoc.viewState.currentTool = .selection
+                temporaryTool = selectionTool
+                activeDoc.viewState.currentTool = selectionTool
             }
-            else if !cmdPressed && temporaryTool == .selection {
+            else if !cmdPressed && (temporaryTool == .selection || temporaryTool == .directSelection) {
                 if let previous = previousTool {
                     activeDoc.viewState.currentTool = previous
                     temporaryTool = nil

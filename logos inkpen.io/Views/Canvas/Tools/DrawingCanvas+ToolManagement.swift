@@ -5,9 +5,10 @@ extension DrawingCanvas {
 
     internal func handleToolChange(oldTool: DrawingTool, newTool: DrawingTool) {
         let isCmdPressed = NSEvent.modifierFlags.contains(.command)
-        if newTool == .selection && isCmdPressed {
+        let isSelectionToolTool = newTool == .selection || newTool == .directSelection
+        if isSelectionToolTool && isCmdPressed && !(oldTool == .selection || oldTool == .directSelection) {
             isTemporarySelectionViaCommand = true
-        } else if oldTool == .selection && isTemporarySelectionViaCommand {
+        } else if (oldTool == .selection || oldTool == .directSelection) && isTemporarySelectionViaCommand {
             isTemporarySelectionViaCommand = false
         }
         if isCornerRadiusEditMode {
@@ -18,7 +19,7 @@ extension DrawingCanvas {
         } else if newTool == .selection && !isTemporarySelectionViaCommand {
             stopAllTextEditing()
         }
-        let isTemporaryTool = newTool == .hand || newTool == .zoom || (newTool == .selection && isTemporarySelectionViaCommand)
+        let isTemporaryTool = newTool == .hand || newTool == .zoom || (isSelectionToolTool && isTemporarySelectionViaCommand)
         if previousTool == .bezierPen && newTool != .bezierPen && !isTemporaryTool && isBezierDrawing {
             finishBezierPath()
         }
@@ -81,7 +82,7 @@ extension DrawingCanvas {
     }
 
     private func handleSelectionConversion(from oldTool: DrawingTool, to newTool: DrawingTool) {
-        if newTool == .selection && isTemporarySelectionViaCommand {
+        if (newTool == .selection || newTool == .directSelection) && isTemporarySelectionViaCommand {
         }
         else if newTool == .selection {
             if !selectedObjectIDs.isEmpty {
