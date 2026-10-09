@@ -96,6 +96,10 @@ extension DrawingCanvas {
         if abs(canvasDelta.x) > 2 || abs(canvasDelta.y) > 2 {
         }
         guard let startPoint = drawingStartPoint else { return }
+        if let radialPath = radialShapePath(tool: document.viewState.currentTool, center: startPoint, cursor: currentLocation) {
+            currentPath = radialPath
+            return
+        }
         switch document.viewState.currentTool {
         case .line:
             var lineEnd = currentLocation
