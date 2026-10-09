@@ -106,16 +106,14 @@ extension DrawingCanvas {
         case .zoom:
             if zoomToolDragStartPoint == .zero {
                 zoomToolDragStartPoint = value.startLocation
-                zoomToolInitialZoomLevel = zoomLevel
                 isActivelyZooming = true
             }
-            let dragDelta = value.location.y - zoomToolDragStartPoint.y
-            let zoomSensitivity: CGFloat = 0.01
-            let zoomFactor = 1.0 - (dragDelta * zoomSensitivity)
-            let targetZoom = zoomToolInitialZoomLevel * zoomFactor
-            let clampedZoom = ZoomMath.clamp(targetZoom)
-            let focalPoint = zoomToolDragStartPoint
-            handleZoomAtPoint(newZoomLevel: clampedZoom, focalPoint: focalPoint, geometry: geometry)
+            zoomMarqueeRect = CGRect(
+                x: min(value.startLocation.x, value.location.x),
+                y: min(value.startLocation.y, value.location.y),
+                width: abs(value.location.x - value.startLocation.x),
+                height: abs(value.location.y - value.startLocation.y)
+            )
         case .line, .rectangle, .square, .roundedRectangle, .pill, .circle, .ellipse, .oval, .egg, .cone, .star, .polygon, .pentagon, .hexagon, .heptagon, .octagon, .nonagon, .equilateralTriangle, .isoscelesTriangle, .rightTriangle, .acuteTriangle:
             handleShapeDrawing(value: value, geometry: geometry)
         case .font:
@@ -156,6 +154,10 @@ extension DrawingCanvas {
         case .hand:
             finishPanGesture()
         case .zoom:
+            if let rect = zoomMarqueeRect, rect.width > 4, rect.height > 4 {
+                zoomToRect(rect, geometry: geometry)
+            }
+            zoomMarqueeRect = nil
             zoomToolDragStartPoint = .zero
             isActivelyZooming = false
             #if os(macOS)

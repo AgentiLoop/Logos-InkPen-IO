@@ -111,7 +111,7 @@ struct DrawingCanvas: View {
     @State internal var isTextEditingMode = false
     @State internal var zoomToolDragStartPoint: CGPoint = .zero
     @State internal var transformToolSession: TransformToolSession? = nil
-    @State internal var zoomToolInitialZoomLevel: CGFloat = 1.0
+    @State internal var zoomMarqueeRect: CGRect? = nil
     @State internal var liveZoomDelta: CGFloat = 1.0
     @State internal var livePanDelta: CGPoint = .zero
     @State internal var isActivelyZooming: Bool = false

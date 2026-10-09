@@ -16,6 +16,19 @@ extension DrawingCanvas {
         ZoomMath.stepDown(from: zoom)
     }
 
+    /// Illustrator Zoom tool: drag a marquee (screen coordinates) to fill the view with that area.
+    internal func zoomToRect(_ rect: CGRect, geometry: GeometryProxy) {
+        guard rect.width > 0, rect.height > 0, zoomLevel > 0 else { return }
+        let scale = min(geometry.size.width / rect.width, geometry.size.height / rect.height)
+        let newZoom = ZoomMath.clamp(zoomLevel * scale)
+        let canvasCenter = CGPoint(x: (rect.midX - canvasOffset.x) / zoomLevel, y: (rect.midY - canvasOffset.y) / zoomLevel)
+        zoomLevel = newZoom
+        canvasOffset = CGPoint(
+            x: geometry.size.width / 2.0 - canvasCenter.x * newZoom,
+            y: geometry.size.height / 2.0 - canvasCenter.y * newZoom
+        )
+    }
+
     internal func handleZoomGestureChanged(value: CGFloat, geometry: GeometryProxy) {
         guard !isBezierDrawing && !isPanGestureActive else {
             return
