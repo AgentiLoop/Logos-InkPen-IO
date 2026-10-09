@@ -68,7 +68,7 @@ class ClipboardManager {
         }
     }
 
-    func copy(from document: VectorDocument) {
+    private func makeClipboardData(from document: VectorDocument) -> ClipboardData {
         var shapesToCopy: [VectorShape] = []
         var copiedShapeIDs: Set<UUID> = []
         var textToCopy: [VectorText] = []
@@ -106,7 +106,11 @@ class ClipboardManager {
                 }
             }
         }
-        let clipboardData = ClipboardData(shapes: shapesToCopy, texts: textToCopy)
+        return ClipboardData(shapes: shapesToCopy, texts: textToCopy)
+    }
+
+    func copy(from document: VectorDocument) {
+        let clipboardData = makeClipboardData(from: document)
         do {
             let data = try JSONEncoder().encode(clipboardData)
             pasteboard.clearContents()
@@ -250,67 +254,75 @@ class ClipboardManager {
         guard let data = pasteboard.data(forType: vectorObjectsType) else { return }
         do {
             let clipboardData = try JSONDecoder().decode(ClipboardData.self, from: data)
-            guard let selectedLayerId = document.settings.selectedLayerId,
-                  let layerIndex = document.snapshot.layers.firstIndex(where: { $0.id == selectedLayerId }) else { return }
-            if layerIndex < document.snapshot.layers.count && document.snapshot.layers[layerIndex].isLocked {
-                Log.error("❌ Cannot paste into locked layer '\(document.snapshot.layers[layerIndex].name)'", category: .error)
-                return
-            }
-            if layerIndex < document.snapshot.layers.count {
-                let layerName = document.snapshot.layers[layerIndex].name
-                if layerName == "Canvas" || layerName == "Pasteboard" || layerName == "Guides" {
-                    Log.error("❌ Cannot paste into system layer '\(layerName)'", category: .error)
-                    return
-                }
-            }
-            var newObjectIDs: Set<UUID> = []
-            let (newShapes, _) = regenerateUUIDsForShapes(clipboardData.shapes)
-            var memberIDSet = Set<UUID>()
-            for shape in newShapes {
-                if !shape.memberIDs.isEmpty {
-                    memberIDSet.formUnion(shape.memberIDs)
-                }
-            }
-            var topLevelObjects: [VectorObject] = []
-            var memberObjects: [VectorObject] = []
-            for shape in newShapes {
-                let obj = VectorObject(shape: shape, layerIndex: layerIndex)
-                if memberIDSet.contains(shape.id) {
-                    memberObjects.append(obj)
-                } else {
-                    topLevelObjects.append(obj)
-                    newObjectIDs.insert(shape.id)
-                }
-            }
-            let textObjects = clipboardData.texts.map { text -> VectorObject in
-                var newText = text
-                newText.id = UUID()
-                newText.layerIndex = layerIndex
-                let textShape = VectorShape.from(newText)
-                newObjectIDs.insert(newText.id)
-                return VectorObject(shape: textShape, layerIndex: layerIndex)
-            }
-            for memberObj in memberObjects {
-                document.snapshot.objects[memberObj.id] = memberObj
-            }
-            let objectsToAdd = topLevelObjects + textObjects
-            if !objectsToAdd.isEmpty {
-                let currentTool = document.viewState.currentTool
-                let position: AddObjectAtPositionCommand.InsertPosition
-                if !document.viewState.selectedObjectIDs.isEmpty {
-                    position = .afterSelection(document.viewState.selectedObjectIDs)
-                } else {
-                    position = .front
-                }
-                let command = AddObjectAtPositionCommand(objects: objectsToAdd, position: position)
-                document.commandManager.execute(command)
-                if currentTool != .selection && currentTool != .directSelection {
-                    document.viewState.currentTool = .selection
-                }
-                document.viewState.selectedObjectIDs = newObjectIDs
-            }
+            insertInFront(clipboardData, into: document)
         } catch {
             Log.error("❌ Failed to paste in front: \(error)", category: .error)
+        }
+    }
+
+    func duplicateSelectionInPlace(in document: VectorDocument) {
+        insertInFront(makeClipboardData(from: document), into: document)
+    }
+
+    private func insertInFront(_ clipboardData: ClipboardData, into document: VectorDocument) {
+        guard let selectedLayerId = document.settings.selectedLayerId,
+              let layerIndex = document.snapshot.layers.firstIndex(where: { $0.id == selectedLayerId }) else { return }
+        if layerIndex < document.snapshot.layers.count && document.snapshot.layers[layerIndex].isLocked {
+            Log.error("❌ Cannot paste into locked layer '\(document.snapshot.layers[layerIndex].name)'", category: .error)
+            return
+        }
+        if layerIndex < document.snapshot.layers.count {
+            let layerName = document.snapshot.layers[layerIndex].name
+            if layerName == "Canvas" || layerName == "Pasteboard" || layerName == "Guides" {
+                Log.error("❌ Cannot paste into system layer '\(layerName)'", category: .error)
+                return
+            }
+        }
+        var newObjectIDs: Set<UUID> = []
+        let (newShapes, _) = regenerateUUIDsForShapes(clipboardData.shapes)
+        var memberIDSet = Set<UUID>()
+        for shape in newShapes {
+            if !shape.memberIDs.isEmpty {
+                memberIDSet.formUnion(shape.memberIDs)
+            }
+        }
+        var topLevelObjects: [VectorObject] = []
+        var memberObjects: [VectorObject] = []
+        for shape in newShapes {
+            let obj = VectorObject(shape: shape, layerIndex: layerIndex)
+            if memberIDSet.contains(shape.id) {
+                memberObjects.append(obj)
+            } else {
+                topLevelObjects.append(obj)
+                newObjectIDs.insert(shape.id)
+            }
+        }
+        let textObjects = clipboardData.texts.map { text -> VectorObject in
+            var newText = text
+            newText.id = UUID()
+            newText.layerIndex = layerIndex
+            let textShape = VectorShape.from(newText)
+            newObjectIDs.insert(newText.id)
+            return VectorObject(shape: textShape, layerIndex: layerIndex)
+        }
+        for memberObj in memberObjects {
+            document.snapshot.objects[memberObj.id] = memberObj
+        }
+        let objectsToAdd = topLevelObjects + textObjects
+        if !objectsToAdd.isEmpty {
+            let currentTool = document.viewState.currentTool
+            let position: AddObjectAtPositionCommand.InsertPosition
+            if !document.viewState.selectedObjectIDs.isEmpty {
+                position = .afterSelection(document.viewState.selectedObjectIDs)
+            } else {
+                position = .front
+            }
+            let command = AddObjectAtPositionCommand(objects: objectsToAdd, position: position)
+            document.commandManager.execute(command)
+            if currentTool != .selection && currentTool != .directSelection {
+                document.viewState.currentTool = .selection
+            }
+            document.viewState.selectedObjectIDs = newObjectIDs
         }
     }
 }

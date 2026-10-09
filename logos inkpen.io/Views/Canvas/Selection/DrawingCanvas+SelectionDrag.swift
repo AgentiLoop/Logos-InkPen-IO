@@ -234,6 +234,9 @@ extension DrawingCanvas {
             document.dragSession.cachedSelectionBounds = nil
             document.dragSession.activeLayerIndex = nil
             layerPreviewOpacities.removeAll()
+            if NSEvent.modifierFlags.contains(.option) && !isBezierDrawing {
+                ClipboardManager.shared.duplicateSelectionInPlace(in: document)
+            }
             var oldShapes: [UUID: VectorShape] = [:]
             var affectedObjectIDs: Set<UUID> = []
 
