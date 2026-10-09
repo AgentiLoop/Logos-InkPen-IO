@@ -20,6 +20,33 @@ extension DrawingCanvas {
         }
     }
 
+    /// Illustrator's Pen tool: clicking an anchor of the selected path deletes it (end anchors of an open path continue it),
+    /// clicking a segment of the selected path adds an anchor. Returns true if the click was consumed.
+    func handlePenAutoAddDeleteAnchor(at location: CGPoint) -> Bool {
+        let selected = document.viewState.selectedObjectIDs
+        guard !selected.isEmpty else { return false }
+        let tolerance: Double = 8.0 / zoomLevel
+        if let pointID = findAnchorPointAt(location: location, tolerance: tolerance, restrictedTo: selected) {
+            if let object = document.snapshot.objects[pointID.shapeID],
+               case .shape(let shape) = object.objectType {
+                let elements = shape.path.elements
+                let isClosed = shape.path.isClosed || elements.contains { if case .close = $0 { return true } else { return false } }
+                let lastDrawnIndex = elements.lastIndex { if case .close = $0 { return false } else { return true } } ?? 0
+                if !isClosed && (pointID.elementIndex == 0 || pointID.elementIndex == lastDrawnIndex) {
+                    selectedPoints = [pointID]
+                    return false
+                }
+            }
+            deletePointWithCurvePreservation(pointID: pointID)
+            return true
+        }
+        if let segmentHit = findSegmentAt(location: location, tolerance: tolerance, restrictedTo: selected) {
+            insertPointOnSegment(shapeID: segmentHit.shapeID, elementIndex: segmentHit.elementIndex, at: location)
+            return true
+        }
+        return false
+    }
+
     private func insertPointOnSegment(shapeID: UUID, elementIndex: Int, at location: CGPoint) {
         guard let object = document.snapshot.objects[shapeID],
               case .shape(let shape) = object.objectType,
@@ -172,10 +199,11 @@ extension DrawingCanvas {
         }
     }
 
-    private func findAnchorPointAt(location: CGPoint, tolerance: Double) -> PointID? {
+    private func findAnchorPointAt(location: CGPoint, tolerance: Double, restrictedTo: Set<UUID>? = nil) -> PointID? {
         for newVectorObject in document.snapshot.objects.values.reversed() {
             if case .shape(let shape) = newVectorObject.objectType {
                 if !shape.isVisible || shape.isLocked { continue }
+                if let restrictedTo, !restrictedTo.contains(shape.id) { continue }
             for (elementIndex, element) in shape.path.elements.enumerated() {
                 switch element {
                 case .move(let to), .line(let to), .curve(let to, _, _), .quadCurve(let to, _):
@@ -193,10 +221,11 @@ extension DrawingCanvas {
         return nil
     }
 
-    private func findSegmentAt(location: CGPoint, tolerance: Double) -> (shapeID: UUID, elementIndex: Int)? {
+    private func findSegmentAt(location: CGPoint, tolerance: Double, restrictedTo: Set<UUID>? = nil) -> (shapeID: UUID, elementIndex: Int)? {
         for object in document.snapshot.objects.values.reversed() {
             if case .shape(let shape) = object.objectType {
                 if !shape.isVisible || shape.isLocked { continue }
+                if let restrictedTo, !restrictedTo.contains(shape.id) { continue }
                 var previousPoint: VectorPoint?
                 for (elementIndex, element) in shape.path.elements.enumerated() {
                     switch element {

@@ -75,6 +75,9 @@ extension DrawingCanvas {
             }
         }
         if !isBezierDrawing {
+            if !isShiftPressed && handlePenAutoAddDeleteAnchor(at: location) {
+                return
+            }
             if let selectedPointID = selectedPoints.first {
                 if getShapeForPoint(selectedPointID) != nil,
 
