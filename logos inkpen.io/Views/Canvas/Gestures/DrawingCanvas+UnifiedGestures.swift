@@ -348,17 +348,20 @@ extension DrawingCanvas {
             }
         }
         guard let tappedShape else {
+            if !isShiftPressed && !isOptionPressed {
+                document.viewState.selectedObjectIDs = []
+            }
             return
         }
-        let targetColor: VectorColor?
+        let matchFill = tappedShape.fillStyle != nil
+        let colorToMatch: VectorColor
         if let fillColor = tappedShape.fillStyle?.color {
-            targetColor = fillColor
+            colorToMatch = fillColor
         } else if let strokeColor = tappedShape.strokeStyle?.color {
-            targetColor = strokeColor
+            colorToMatch = strokeColor
         } else {
             return
         }
-        guard let colorToMatch = targetColor else { return }
         var matchingObjectIDs = Set<UUID>()
         for layerIndex in 0..<document.snapshot.layers.count {
             let layer = document.snapshot.layers[layerIndex]
@@ -374,15 +377,22 @@ extension DrawingCanvas {
                     if shape.name == "Canvas Background" || shape.name == "Pasteboard Background" {
                         continue
                     }
-                    let hasFillMatch = shape.fillStyle?.color == colorToMatch
-                    let hasStrokeMatch = shape.strokeStyle?.color == colorToMatch
-                    if hasFillMatch || hasStrokeMatch {
+                    if !shape.isVisible { continue }
+                    let isMatch = matchFill
+                        ? shape.fillStyle?.color == colorToMatch
+                        : shape.strokeStyle?.color == colorToMatch
+                    if isMatch {
                         matchingObjectIDs.insert(object.id)
                     }
                 }
             }
         }
-        if !matchingObjectIDs.isEmpty {
+        if matchingObjectIDs.isEmpty { return }
+        if isOptionPressed {
+            document.viewState.selectedObjectIDs.subtract(matchingObjectIDs)
+        } else if isShiftPressed {
+            document.viewState.selectedObjectIDs.formUnion(matchingObjectIDs)
+        } else {
             document.viewState.selectedObjectIDs = matchingObjectIDs
         }
     }
