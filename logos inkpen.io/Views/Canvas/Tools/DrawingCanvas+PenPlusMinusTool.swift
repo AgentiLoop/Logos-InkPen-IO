@@ -59,10 +59,12 @@ extension DrawingCanvas {
         return false
     }
 
-    private func insertPointOnSegment(shapeID: UUID, elementIndex: Int, at location: CGPoint) {
+    private func insertPointOnSegment(shapeID: UUID, elementIndex: Int, at canvasLocation: CGPoint) {
         guard let object = document.snapshot.objects[shapeID],
               case .shape(let shape) = object.objectType,
               elementIndex < shape.path.elements.count else { return }
+        // Path elements are stored in the shape's local space; the click arrives in canvas space.
+        let location = shape.transform.isIdentity ? canvasLocation : canvasLocation.applying(shape.transform.inverted())
         let element = shape.path.elements[elementIndex]
         let oldPath = shape.path
 
