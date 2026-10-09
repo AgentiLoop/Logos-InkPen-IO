@@ -10,11 +10,13 @@ extension DrawingCanvas {
         freehandRealtimeSmoothingPoints.removeAll()
         isFreehandDrawing = false
         activeFreehandShape = nil
+        freehandContinueTarget = nil
     }
 
     internal func handleFreehandDragStart(at location: CGPoint) {
         guard !isFreehandDrawing else { return }
         isFreehandDrawing = true
+        freehandContinueTarget = findFreehandContinueTarget(at: location)
         freehandRawPoints = [location]
         freehandSimplifiedPoints = []
         let startPoint = VectorPoint(location)
@@ -134,6 +136,7 @@ extension DrawingCanvas {
     }
 
     private func updateFinalFreehandShape(with smoothPath: VectorPath) {
+        if let target = freehandContinueTarget, mergeFreehandStroke(smoothPath, into: target) { return }
         var strokeColor = getCurrentStrokeColor()
         var fillColor = getCurrentFillColor()
         if strokeColor == .clear {

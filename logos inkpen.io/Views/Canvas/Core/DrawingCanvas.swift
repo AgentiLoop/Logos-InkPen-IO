@@ -81,6 +81,7 @@ struct DrawingCanvas: View {
     @State internal var freehandSimplifiedPoints: [VectorPoint] = []
     @State internal var freehandRealtimeSmoothingPoints: [CGPoint] = []
     @State internal var isFreehandDrawing = false
+    @State internal var freehandContinueTarget: FreehandContinueTarget? = nil
     @State internal var activeFreehandShape: VectorShape? = nil
     @State internal var freehandPreviewPath: VectorPath? = nil
     @State internal var brushPath: VectorPath?
