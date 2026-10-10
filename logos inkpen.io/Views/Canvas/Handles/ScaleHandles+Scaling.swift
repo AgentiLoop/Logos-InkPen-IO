@@ -27,8 +27,8 @@ extension ScaleHandles {
         let baseBounds = shape.isGroupContainer ? shape.groupBounds : shape.bounds
         let adaptiveMinDistanceX = min(20.0, max(2.0, abs(baseBounds.width) * 0.05))
         let adaptiveMinDistanceY = min(20.0, max(2.0, abs(baseBounds.height) * 0.05))
-        let maxScale: CGFloat = 10.0
-        let minScale: CGFloat = 0.1
+        let maxScale: CGFloat = 1000.0
+        let minScale: CGFloat = 0.001
 
         var scaleX = abs(startDistance.x) > adaptiveMinDistanceX ? abs(currentDistance.x) / abs(startDistance.x) : 1.0
         var scaleY = abs(startDistance.y) > adaptiveMinDistanceY ? abs(currentDistance.y) / abs(startDistance.y) : 1.0
@@ -126,8 +126,8 @@ extension ScaleHandles {
             y: currentLocation.y - anchorScreenY
         )
         let minDistance: CGFloat = 10.0
-        let maxScale: CGFloat = 10.0
-        let minScale: CGFloat = 0.1
+        let maxScale: CGFloat = 1000.0
+        let minScale: CGFloat = 0.001
 
         var scaleX = abs(startDistance.x) > minDistance ? abs(currentDistance.x) / abs(startDistance.x) : 1.0
         var scaleY = abs(startDistance.y) > minDistance ? abs(currentDistance.y) / abs(startDistance.y) : 1.0
