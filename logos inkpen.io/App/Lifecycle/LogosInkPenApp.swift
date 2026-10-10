@@ -320,6 +320,13 @@ struct logos_inken_ioApp: App {
                         .help("Embed the image data into the document for portability. Default behavior keeps links.")
                     }
                     Divider()
+                    Button("Join") {
+                        documentState?.joinPaths()
+                    }
+                    .keyboardShortcut("j", modifiers: [.command])
+                    .disabled(documentState?.canJoinPaths != true)
+                    .help("Join selected open paths at their end points; a single open path is closed")
+                    Divider()
                     Button("Make Compound Path") {
                         documentState?.makeCompoundPath()
                     }

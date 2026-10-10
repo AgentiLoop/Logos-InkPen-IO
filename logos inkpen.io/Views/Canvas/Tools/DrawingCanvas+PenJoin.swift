@@ -5,9 +5,13 @@ final class JoinPathsCommand: BaseCommand {
     private let modify: ModifyPathCommand
     private let delete: DeleteObjectCommand
 
-    init(survivorID: UUID, oldPath: VectorPath, mergedPath: VectorPath, removedID: UUID, document: VectorDocument) {
+    convenience init(survivorID: UUID, oldPath: VectorPath, mergedPath: VectorPath, removedID: UUID, document: VectorDocument) {
+        self.init(survivorID: survivorID, oldPath: oldPath, mergedPath: mergedPath, removedIDs: [removedID], document: document)
+    }
+
+    init(survivorID: UUID, oldPath: VectorPath, mergedPath: VectorPath, removedIDs: [UUID], document: VectorDocument) {
         modify = ModifyPathCommand(objectID: survivorID, oldPath: oldPath, newPath: mergedPath)
-        delete = DeleteObjectCommand(objectIDs: [removedID], document: document)
+        delete = DeleteObjectCommand(objectIDs: removedIDs, document: document)
     }
 
     override func execute(on document: VectorDocument) {

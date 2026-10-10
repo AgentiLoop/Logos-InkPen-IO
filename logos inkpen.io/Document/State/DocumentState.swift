@@ -24,6 +24,7 @@ class DocumentState: ObservableObject {
     @Published var canFlatten = false
     @Published var canUnflatten = false
     @Published var canMakeCompoundPath = false
+    @Published var canJoinPaths = false
     @Published var canReleaseCompoundPath = false
     @Published var canMakeLoopingPath = false
     @Published var canReleaseLoopingPath = false
@@ -153,6 +154,7 @@ class DocumentState: ObservableObject {
             canFlatten = false
             canUnflatten = false
             canMakeCompoundPath = false
+            canJoinPaths = false
             canReleaseCompoundPath = false
             canMakeLoopingPath = false
             canReleaseLoopingPath = false
@@ -195,6 +197,7 @@ class DocumentState: ObservableObject {
             return false
         }
         canMakeCompoundPath = selectedShapeCount > 1
+        canJoinPaths = document.canJoinSelectedPaths
         canReleaseCompoundPath = selectedShapeCount == 1 && selectedShapes.contains { newVectorObject in
             if case .shape(let shape) = newVectorObject.objectType {
                 return shape.isTrueCompoundPath
@@ -949,6 +952,11 @@ class DocumentState: ObservableObject {
         } else if !document.viewState.selectedObjectIDs.isEmpty {
             document.duplicateSelectedText()
         }
+        updateAllStates()
+    }
+
+    func joinPaths() {
+        document?.joinSelectedPaths()
         updateAllStates()
     }
 
