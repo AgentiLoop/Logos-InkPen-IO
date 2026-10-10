@@ -238,6 +238,9 @@ extension DrawingCanvas {
         originalBezierHandles.removeAll()
         isDraggingBezierHandle = false
         isDraggingBezierPoint = false
+        document.viewState.isShapeDrawingInProgress = false
+        document.viewState.isSpaceHeldDuringShapeDrag = false
+        document.viewState.lastShapeDragLocation = nil
         updatePathWithHandles()
         updateActiveBezierShapeInDocument()
         if dragClosesPath {
@@ -712,11 +715,33 @@ extension DrawingCanvas {
                 bezierPoints.append(newPoint)
                 activeBezierPointIndex = bezierPoints.count - 1
                 bezierPath?.addElement(.line(to: newPoint))
+                // Lets the key monitor route Space to this drag (Illustrator: Space repositions the anchor).
+                document.viewState.isShapeDrawingInProgress = true
+                document.viewState.lastShapeDragLocation = currentLocation
             } else {
                 activeBezierPointIndex = bezierPoints.count - 1
             }
         }
         let activeIndex = bezierPoints.count - 1
+        if document.viewState.isShapeDrawingInProgress {
+            let lastLocation = document.viewState.lastShapeDragLocation ?? currentLocation
+            document.viewState.lastShapeDragLocation = currentLocation
+            if document.viewState.isSpaceHeldDuringShapeDrag {
+                // Space held: move the anchor and its handles with the cursor instead of reshaping the handles.
+                let dx = currentLocation.x - lastLocation.x
+                let dy = currentLocation.y - lastLocation.y
+                bezierPoints[activeIndex].x += dx
+                bezierPoints[activeIndex].y += dy
+                if var handles = liveBezierHandles[activeIndex] {
+                    handles.control1?.x += dx
+                    handles.control1?.y += dy
+                    handles.control2?.x += dx
+                    handles.control2?.y += dy
+                    liveBezierHandles[activeIndex] = handles
+                }
+                return
+            }
+        }
         let activePoint = bezierPoints[activeIndex]
         let activeLocation = CGPoint(x: activePoint.x, y: activePoint.y)
         let dragVector = CGPoint(
