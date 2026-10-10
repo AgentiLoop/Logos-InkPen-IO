@@ -8,10 +8,12 @@ struct MoveObjectDialog: View {
 
     @State private var xDelta: String = "0"
     @State private var yDelta: String = "0"
+    @State private var distance: String = "0"
+    @State private var angle: String = "0"
 
     @FocusState private var focusedField: Field?
     enum Field {
-        case x, y
+        case x, y, distance, angle
     }
 
     private var currentUnit: MeasurementUnit {
@@ -51,14 +53,45 @@ struct MoveObjectDialog: View {
                         .multilineTextAlignment(.trailing)
                         .focused($focusedField, equals: .y)
                         .onSubmit {
-                            applyMove()
+                            focusedField = .distance
                         }
                     Text(unitSuffix)
                         .foregroundColor(.secondary)
                         .frame(width: 30, alignment: .leading)
                 }
+                Divider()
+                HStack {
+                    Text("Distance:")
+                        .frame(width: 80, alignment: .trailing)
+                    TextField("0", text: $distance)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 100)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: .distance)
+                        .onSubmit {
+                            focusedField = .angle
+                        }
+                    Text(unitSuffix)
+                        .foregroundColor(.secondary)
+                        .frame(width: 30, alignment: .leading)
+                }
+                HStack {
+                    Text("Angle:")
+                        .frame(width: 80, alignment: .trailing)
+                    TextField("0", text: $angle)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 100)
+                        .multilineTextAlignment(.trailing)
+                        .focused($focusedField, equals: .angle)
+                        .onSubmit {
+                            applyMove(copy: false)
+                        }
+                    Text("°")
+                        .foregroundColor(.secondary)
+                        .frame(width: 30, alignment: .leading)
+                }
             }
-            Text("Use positive values to move right/down, negative to move left/up")
+            Text("Horizontal/Vertical: positive moves right/down. Angle is counter-clockwise from the right, as in Illustrator.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -67,21 +100,51 @@ struct MoveObjectDialog: View {
                     isPresented = false
                 }
                 .keyboardShortcut(.escape, modifiers: [])
+                Button("Copy") {
+                    applyMove(copy: true)
+                }
+                .disabled(!document.viewState.selectedPoints.isEmpty)
                 Button("Move") {
-                    applyMove()
+                    applyMove(copy: false)
                 }
                 .keyboardShortcut(.return, modifiers: [])
                 .buttonStyle(.borderedProminent)
             }
         }
         .padding(20)
-        .frame(width: 280)
+        .frame(width: 320)
         .onAppear {
             focusedField = .x
         }
+        .onChange(of: focusedField) { oldField, _ in
+            syncFields(from: oldField)
+        }
     }
 
-    private func applyMove() {
+    private func fmt(_ value: Double) -> String {
+        let rounded = (value * 10000).rounded() / 10000
+        return rounded == rounded.rounded() ? String(Int(rounded)) : String(rounded)
+    }
+
+    /// Keeps Horizontal/Vertical and Distance/Angle consistent: the pair that was just edited drives the other.
+    private func syncFields(from field: Field?) {
+        switch field {
+        case .x, .y:
+            guard let x = Double(xDelta), let y = Double(yDelta) else { return }
+            distance = fmt(hypot(x, y))
+            angle = fmt(hypot(x, y) == 0 ? 0 : atan2(-y, x) * 180 / .pi)
+        case .distance, .angle:
+            guard let d = Double(distance), let a = Double(angle) else { return }
+            let radians = a * .pi / 180
+            xDelta = fmt(d * cos(radians))
+            yDelta = fmt(-d * sin(radians))
+        case nil:
+            break
+        }
+    }
+
+    private func applyMove(copy: Bool) {
+        syncFields(from: focusedField)
         guard let xValue = Double(xDelta),
 
               let yValue = Double(yDelta) else {
@@ -93,6 +156,12 @@ struct MoveObjectDialog: View {
         guard deltaX != 0 || deltaY != 0 else {
             isPresented = false
             return
+        }
+        if document.viewState.selectedPoints.isEmpty {
+            document.viewState.lastTransformAgain = (CGAffineTransform(translationX: deltaX, y: deltaY), copy)
+            if copy {
+                ClipboardManager.shared.duplicateSelectionInPlace(in: document)
+            }
         }
         if !document.viewState.selectedPoints.isEmpty {
             applyMoveToSelectedPoints(deltaX: deltaX, deltaY: deltaY)
