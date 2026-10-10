@@ -89,6 +89,8 @@ struct DrawingCanvas: View {
     @State internal var lassoPoints: [CGPoint] = []
     @State internal var lassoPreviewPath: VectorPath? = nil
     @State internal var lassoBase: Set<UUID> = []
+    @State internal var smoothPoints: [CGPoint] = []
+    @State internal var smoothPreviewPath: VectorPath? = nil
     @State internal var eraserPoints: [CGPoint] = []
     @State internal var eraserPreviewPath: VectorPath? = nil
     @State internal var brushPath: VectorPath?

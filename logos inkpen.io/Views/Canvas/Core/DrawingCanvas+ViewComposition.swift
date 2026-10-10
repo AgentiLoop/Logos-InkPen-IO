@@ -123,6 +123,21 @@ extension DrawingCanvas {
             }
             .allowsHitTesting(false)
         }
+        if let preview = smoothPreviewPath {
+            Canvas { context, size in
+                context.translateBy(x: canvasOffset.x, y: canvasOffset.y)
+                context.scaleBy(x: zoomLevel, y: zoomLevel)
+                let path = Path { path in
+                    addPathElements(preview.elements, to: &path)
+                }
+                context.stroke(
+                    path,
+                    with: .color(Color.accentColor.opacity(0.7)),
+                    style: SwiftUI.StrokeStyle(lineWidth: max(1.0, 1.0 / zoomLevel), lineCap: .round, lineJoin: .round)
+                )
+            }
+            .allowsHitTesting(false)
+        }
         if let preview = eraserPreviewPath {
             Canvas { context, size in
                 context.translateBy(x: canvasOffset.x, y: canvasOffset.y)

@@ -735,6 +735,10 @@ struct logos_inken_ioApp: App {
                         documentState?.switchToTool(.knife)
                     }
                     .help("Switch to knife tool")
+                    Button("Smooth Tool") {
+                        documentState?.switchToTool(.smooth)
+                    }
+                    .help("Switch to smooth tool")
                     Button("Eraser Tool") {
                         documentState?.switchToTool(.eraser)
                     }
