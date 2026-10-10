@@ -497,6 +497,9 @@ struct TransformBoxHandles: View {
         if settings.liveScalingPreview {
             liveScaleTransform = .identity
         }
+        if !previewTransform.isIdentity {
+            document.viewState.lastTransformAgain = (previewTransform, false)
+        }
         if shape.name == "Combined Selection" {
             applyMultiSelectionScaling()
             previewTransform = .identity

@@ -13,6 +13,7 @@ extension VectorDocument {
         }
         guard !viewState.selectedObjectIDs.isEmpty else { return }
         let translationTransform = CGAffineTransform(translationX: nudgeAmount.dx, y: nudgeAmount.dy)
+        viewState.lastTransformAgain = (translationTransform, false)
         modifySelectedShapesWithUndo(
             preCapture: {
                 for objectID in viewState.selectedObjectIDs {
