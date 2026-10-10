@@ -26,8 +26,10 @@ extension DrawingCanvas {
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Cancel")
 
+        // Lengths are shown and typed in the document's units (Illustrator); the canvas stores points.
+        let unit = document.settings.unit
         func makeField(_ value: Double) -> NSTextField {
-            let field = NSTextField(string: String(format: "%g", value))
+            let field = NSTextField(string: String(format: "%g", (value * 10000).rounded() / 10000))
             field.frame = NSRect(x: 80, y: 0, width: 100, height: 22)
             return field
         }
@@ -45,13 +47,17 @@ extension DrawingCanvas {
                    : [("Width:", 100), ("Height:", 100)])
                 : [("Radius:", 50)]
         if tool == .roundedRectangle { rows.append(("Corner Radius:", 20)) }
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 190, height: CGFloat(rows.count) * 28))
+        // The line's angle (row 1) is the only value that isn't a length.
+        let isLength: (Int) -> Bool = { index in !(isLine && index == 1) }
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 236, height: CGFloat(rows.count) * 28))
         var fields: [NSTextField] = []
         for (index, row) in rows.enumerated() {
             let y = CGFloat(rows.count - 1 - index) * 28
-            let label = makeLabel(row.0)
-            label.frame.origin.y = y + 2
-            let field = makeField(row.1)
+            let lengthRow = isLength(index)
+            let label = makeLabel(lengthRow ? "\(row.0.dropLast()) (\(unit.abbreviation)):" : row.0)
+            label.frame = NSRect(x: 0, y: y + 2, width: 124, height: 20)
+            let field = makeField(lengthRow ? unit.fromPoints(row.1) : row.1)
+            field.frame.origin.x = 128
             field.frame.origin.y = y
             container.addSubview(label)
             container.addSubview(field)
@@ -61,7 +67,13 @@ extension DrawingCanvas {
         alert.window.initialFirstResponder = fields.first
 
         guard alert.runModal() == .alertFirstButtonReturn else { return }
-        let values = fields.map { abs(Double($0.stringValue.replacingOccurrences(of: ",", with: ".")) ?? 0) }
+        let values = fields.enumerated().map { index, field -> Double in
+            let typed = abs(Double(field.stringValue.replacingOccurrences(of: ",", with: ".")) ?? 0)
+            if !isLength(index) { return typed }
+            // Untouched defaults keep their exact point value instead of a rounded unit round-trip.
+            let untouched = field.stringValue == String(format: "%g", (unit.fromPoints(rows[index].1) * 10000).rounded() / 10000)
+            return untouched ? rows[index].1 : unit.toPoints(typed)
+        }
         let signedAngle = isLine ? (Double(fields[1].stringValue.replacingOccurrences(of: ",", with: ".")) ?? 0) : 0
         guard let first = values.first, first > 0 else { return }
 
