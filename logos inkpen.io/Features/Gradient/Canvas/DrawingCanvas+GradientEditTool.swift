@@ -21,6 +21,10 @@ struct GradientCenterPointCanvasView: View {
                 .scaledBy(x: zoom, y: zoom)
             context.transform = baseTransform
             let gradientToDisplay = activeGradientDelta ?? selectedGradient
+            if let annotator = GradientAnnotatorGeometry(gradient: gradientToDisplay, bounds: selectedShape.cachedCGPath.boundingBoxOfPath) {
+                annotator.draw(in: &context, stops: gradientToDisplay.stops, zoom: zoom)
+                return
+            }
             let originX = getGradientOriginX(gradientToDisplay)
             let originY = getGradientOriginY(gradientToDisplay)
             let shapeBounds = selectedShape.bounds
