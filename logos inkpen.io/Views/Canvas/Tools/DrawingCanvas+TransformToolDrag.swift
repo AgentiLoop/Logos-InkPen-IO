@@ -8,6 +8,8 @@ final class TransformToolSession {
     let oldShapes: [UUID: VectorShape]
     let origin: CGPoint
     var shearHorizontal: Bool?
+    /// True when started by dragging just outside a selection-box corner with the Selection tool (Illustrator rotate).
+    var rotatesFromSelectionBox = false
     var lastTransform: CGAffineTransform = .identity
 
     init(ids: [UUID], oldShapes: [UUID: VectorShape], origin: CGPoint) {
@@ -22,6 +24,12 @@ extension VectorDocument {
     /// Reference point of Rotate / Scale / Reflect / Shear: the point the user clicked, else the centre of the selection.
     func transformToolOriginPoint() -> CGPoint? {
         if let custom = viewState.transformToolOrigin { return custom }
+        guard let union = selectionUnionBounds() else { return nil }
+        return CGPoint(x: union.midX, y: union.midY)
+    }
+
+    /// Canvas-space union of the selected objects' bounds.
+    func selectionUnionBounds() -> CGRect? {
         var union = CGRect.null
         for id in viewState.selectedObjectIDs {
             guard let object = snapshot.objects[id] else { continue }
@@ -36,8 +44,7 @@ extension VectorDocument {
             if rect.isNull || rect.isInfinite { continue }
             union = union.union(rect)
         }
-        guard !union.isNull else { return nil }
-        return CGPoint(x: union.midX, y: union.midY)
+        return union.isNull ? nil : union
     }
 }
 
@@ -91,6 +98,35 @@ extension DrawingCanvas {
         applyTransform(transform, to: session)
     }
 
+    /// Illustrator: with the Selection tool, dragging just outside a corner of the selection box rotates the selection.
+    /// Returns true while such a rotate drag is active (or just started).
+    internal func handleSelectionBoxRotateDrag(value: DragGesture.Value, geometry: GeometryProxy) -> Bool {
+        if let session = transformToolSession, session.rotatesFromSelectionBox {
+            let start = screenToCanvas(value.startLocation, geometry: geometry)
+            let current = screenToCanvas(value.location, geometry: geometry)
+            let transform = transformForDrag(session: session, start: start, current: current)
+            session.lastTransform = transform
+            applyTransform(transform, to: session)
+            return true
+        }
+        guard transformToolSession == nil, selectionMarqueeRect == nil, !isDrawing, !document.isHandleScalingActive,
+              !document.viewState.selectedObjectIDs.isEmpty,
+              let bounds = document.selectionUnionBounds() else { return false }
+        let startCanvas = screenToCanvas(value.startLocation, geometry: geometry)
+        let zoom = max(CGFloat(zoomLevel), 0.0001)
+        let inner = bounds.insetBy(dx: -8 / zoom, dy: -8 / zoom)
+        guard !inner.contains(startCanvas) else { return false }
+        let reach = 32 / zoom
+        let corners = [CGPoint(x: bounds.minX, y: bounds.minY), CGPoint(x: bounds.maxX, y: bounds.minY),
+                       CGPoint(x: bounds.maxX, y: bounds.maxY), CGPoint(x: bounds.minX, y: bounds.maxY)]
+        guard corners.contains(where: { hypot($0.x - startCanvas.x, $0.y - startCanvas.y) <= reach }) else { return false }
+        if findObjectAtLocationOptimized(startCanvas) != nil { return false }
+        guard let session = makeTransformSession() else { return false }
+        session.rotatesFromSelectionBox = true
+        transformToolSession = session
+        return handleSelectionBoxRotateDrag(value: value, geometry: geometry)
+    }
+
     internal func finishTransformToolDrag() {
         guard let session = transformToolSession else { return }
         transformToolSession = nil
@@ -127,7 +163,7 @@ extension DrawingCanvas {
         let zoom = max(CGFloat(zoomLevel), 0.0001)
         let minDistance = 8.0 / zoom
         var matrix = CGAffineTransform.identity
-        switch document.viewState.currentTool {
+        switch session.rotatesFromSelectionBox ? DrawingTool.rotate : document.viewState.currentTool {
         case .rotate:
             let startAngle = atan2(start.y - o.y, start.x - o.x)
             var delta = atan2(current.y - o.y, current.x - o.x) - startAngle

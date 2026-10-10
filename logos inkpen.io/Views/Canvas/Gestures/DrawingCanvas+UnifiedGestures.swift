@@ -222,6 +222,10 @@ extension DrawingCanvas {
             finishTextBoxDrawing(value: value, geometry: geometry)
             resetTextBoxDrawingState()
         case .selection:
+            if transformToolSession?.rotatesFromSelectionBox == true {
+                finishTransformToolDrag()
+                return
+            }
             if selectionMarqueeRect != nil {
                 finishSelectionMarquee(geometry: geometry)
                 return
@@ -284,6 +288,9 @@ extension DrawingCanvas {
             return
         }
         if isCornerRadiusEditMode {
+            return
+        }
+        if handleSelectionBoxRotateDrag(value: value, geometry: geometry) {
             return
         }
         if handleSelectionMarqueeDrag(value: value, geometry: geometry) {
