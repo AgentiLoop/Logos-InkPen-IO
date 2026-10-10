@@ -12,7 +12,7 @@ struct ToolGroupConfiguration {
         "brushes": [.brush, .marker, .freehand],
         "transforms": [.scale, .rotate, .reflect, .shear, .warp],
         "stars": [.star],
-        "scissors": [.scissors, .knife],
+        "scissors": [.scissors, .knife, .eraser],
         "navigation": [.hand, .zoom],
         "utilities": [.eyedropper, .selectSameColor, .gradient]
     ]

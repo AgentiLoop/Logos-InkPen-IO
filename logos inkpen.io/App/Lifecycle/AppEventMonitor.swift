@@ -90,6 +90,15 @@ final class AppEventMonitor {
             return nil
         }
         if event.type == .keyDown,
+           activeDoc.viewState.currentTool == .eraser,
+           let bracket = event.charactersIgnoringModifiers, bracket == "[" || bracket == "]",
+           event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
+            let settings = ApplicationSettings.shared
+            let step = settings.eraserSize >= 20 ? 5.0 : (settings.eraserSize >= 5 ? 1.0 : 0.5)
+            settings.eraserSize = bracket == "]" ? min(500, settings.eraserSize + step) : max(1, settings.eraserSize - step)
+            return nil
+        }
+        if event.type == .keyDown,
            event.keyCode == Self.escapeKeyCode,
            activeDoc.viewState.isolatedGroupID != nil,
            event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {

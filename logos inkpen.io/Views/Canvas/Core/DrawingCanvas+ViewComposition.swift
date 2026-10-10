@@ -106,6 +106,20 @@ extension DrawingCanvas {
                 )
             }
         }
+        if let preview = eraserPreviewPath {
+            Canvas { context, size in
+                context.translateBy(x: canvasOffset.x, y: canvasOffset.y)
+                context.scaleBy(x: zoomLevel, y: zoomLevel)
+                let path = Path { path in
+                    addPathElements(preview.elements, to: &path)
+                }
+                context.stroke(
+                    path,
+                    with: .color(Color.gray.opacity(0.45)),
+                    style: SwiftUI.StrokeStyle(lineWidth: ApplicationSettings.shared.eraserSize, lineCap: .round, lineJoin: .round)
+                )
+            }
+        }
         if let preview = markerPreviewPath {
             let markerFillColor = ApplicationSettings.shared.markerUseFillAsStroke ? getCurrentFillColor() : getCurrentStrokeColor()
             let markerStrokeColor = ApplicationSettings.shared.markerUseFillAsStroke ? getCurrentFillColor() : getCurrentStrokeColor()

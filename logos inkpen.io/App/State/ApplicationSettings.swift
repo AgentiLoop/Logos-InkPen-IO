@@ -24,6 +24,10 @@ class ApplicationSettings: ObservableObject {
         didSet { UserDefaults.standard.set(currentBrushThickness, forKey: "brushThickness") }
     }
 
+    @Published var eraserSize: Double = UserDefaults.standard.object(forKey: "eraserSize") as? Double ?? 10.0 {
+        didSet { UserDefaults.standard.set(eraserSize, forKey: "eraserSize") }
+    }
+
     @Published var currentBrushSmoothingTolerance: Double = UserDefaults.standard.object(forKey: "brushSmoothingTolerance") as? Double ?? 5.0 {
         didSet { UserDefaults.standard.set(currentBrushSmoothingTolerance, forKey: "brushSmoothingTolerance") }
     }

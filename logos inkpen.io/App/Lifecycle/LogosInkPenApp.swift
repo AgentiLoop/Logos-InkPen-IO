@@ -636,7 +636,7 @@ struct logos_inken_ioApp: App {
                     Button("Egg Tool") {
                         documentState?.switchToTool(.egg)
                     }
-                    .keyboardShortcut("e", modifiers: [.shift])
+                    .keyboardShortcut("e", modifiers: [.shift, .option])
                     .help("Switch to egg tool")
                     Button("Cone Tool") {
                         documentState?.switchToTool(.cone)
@@ -730,6 +730,11 @@ struct logos_inken_ioApp: App {
                         documentState?.switchToTool(.knife)
                     }
                     .help("Switch to knife tool")
+                    Button("Eraser Tool") {
+                        documentState?.switchToTool(.eraser)
+                    }
+                    .keyboardShortcut("e", modifiers: [.shift])
+                    .help("Switch to eraser tool")
                 }
                 CommandMenu("Debug") {
                     Button(action: {

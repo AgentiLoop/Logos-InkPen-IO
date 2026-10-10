@@ -169,6 +169,11 @@ extension DrawingCanvas {
                 handleKnifeDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
             }
             handleKnifeDragUpdate(at: screenToCanvas(value.location, geometry: geometry))
+        case .eraser:
+            if eraserPoints.isEmpty {
+                handleEraserDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
+            }
+            handleEraserDragUpdate(at: screenToCanvas(value.location, geometry: geometry))
         case .brush:
             let currentLocation = screenToCanvas(value.location, geometry: geometry)
             if !isBrushDrawing {
@@ -241,6 +246,8 @@ extension DrawingCanvas {
             handleFreehandDragEnd()
         case .knife:
             handleKnifeDragEnd()
+        case .eraser:
+            handleEraserDragEnd()
         case .brush:
             handleBrushDragEnd()
         case .marker:
