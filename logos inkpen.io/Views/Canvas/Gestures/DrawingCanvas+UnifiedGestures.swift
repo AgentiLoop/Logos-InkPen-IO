@@ -76,6 +76,8 @@ extension DrawingCanvas {
             handleBezierPenTap(at: canvasLocation)
         case .curvature:
             handleCurvatureTap(at: canvasLocation)
+        case .shapeBuilder:
+            handleShapeBuilderTap(at: canvasLocation)
         case .font:
             if !isShiftPressed && !isCommandPressed {
                 if let existingTextID = findTextAt(location: canvasLocation) {
@@ -182,6 +184,11 @@ extension DrawingCanvas {
             handleLassoDragUpdate(at: screenToCanvas(value.location, geometry: geometry))
         case .curvature:
             handleCurvatureDrag(value: value, geometry: geometry)
+        case .shapeBuilder:
+            if shapeBuilderLastPoint == nil && !shapeBuilderAborted {
+                handleShapeBuilderDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
+            }
+            handleShapeBuilderDragUpdate(at: screenToCanvas(value.location, geometry: geometry))
         case .smooth:
             if smoothPoints.isEmpty {
                 handleSmoothDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
@@ -272,6 +279,8 @@ extension DrawingCanvas {
             handleLassoDragEnd()
         case .curvature:
             handleCurvatureDragEnd()
+        case .shapeBuilder:
+            handleShapeBuilderDragEnd()
         case .smooth:
             handleSmoothDragEnd()
         case .eraser:

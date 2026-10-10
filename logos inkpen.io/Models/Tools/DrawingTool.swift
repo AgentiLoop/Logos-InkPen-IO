@@ -48,6 +48,7 @@ enum DrawingTool: String, CaseIterable, Codable {
     case lasso = "Lasso"
     case smooth = "Smooth"
     case curvature = "Curvature"
+    case shapeBuilder = "Shape Builder"
 
     var iconName: String {
         switch self {
@@ -98,6 +99,7 @@ enum DrawingTool: String, CaseIterable, Codable {
         case .lasso: return "lasso"
         case .smooth: return "scribble.variable"
         case .curvature: return "point.topleft.down.to.point.bottomright.curvepath"
+        case .shapeBuilder: return "square.on.square.intersection.dashed"
         }
     }
 }

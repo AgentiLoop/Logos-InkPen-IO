@@ -14,6 +14,7 @@ struct ToolGroupConfiguration {
         "transforms": [.scale, .rotate, .reflect, .shear, .warp],
         "stars": [.star],
         "scissors": [.scissors, .knife, .eraser],
+        "shapeBuilder": [.shapeBuilder],
         "navigation": [.hand, .zoom],
         "utilities": [.eyedropper, .selectSameColor, .gradient]
     ]
@@ -51,6 +52,7 @@ struct ToolGroupConfiguration {
             "polygons",
             "stars",
             "scissors",
+            "shapeBuilder",
             "utilities",
             "navigation"
         ]

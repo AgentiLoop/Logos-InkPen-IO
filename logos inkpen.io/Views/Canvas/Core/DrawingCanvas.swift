@@ -89,6 +89,12 @@ struct DrawingCanvas: View {
     @State internal var lassoPoints: [CGPoint] = []
     @State internal var lassoPreviewPath: VectorPath? = nil
     @State internal var lassoBase: Set<UUID> = []
+    @State internal var shapeBuilderRegions: [ShapeBuilderRegion] = []
+    @State internal var shapeBuilderSources: [VectorShape] = []
+    @State internal var shapeBuilderLayer = 0
+    @State internal var shapeBuilderTouched: [Int] = []
+    @State internal var shapeBuilderLastPoint: CGPoint? = nil
+    @State internal var shapeBuilderAborted = false
     @State internal var curvatureNodes: [CurvatureNode] = []
     @State internal var curvatureShapeID: UUID? = nil
     @State internal var curvatureDragIndex: Int? = nil

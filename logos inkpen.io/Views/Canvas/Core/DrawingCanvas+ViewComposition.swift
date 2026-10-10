@@ -54,6 +54,7 @@ extension DrawingCanvas {
         }
         rubberBandPreview(geometry: geometry)
         curvatureOverlay(geometry: geometry)
+        shapeBuilderOverlay(geometry: geometry)
         if let preview = brushPreviewPath {
             Canvas { context, size in
                 context.translateBy(x: canvasOffset.x, y: canvasOffset.y)
