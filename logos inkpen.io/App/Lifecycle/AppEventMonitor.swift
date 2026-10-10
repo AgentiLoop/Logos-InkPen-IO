@@ -130,6 +130,29 @@ final class AppEventMonitor {
             return nil
         }
         if event.type == .keyDown,
+           activeDoc.viewState.isShapeDrawingInProgress,
+           activeDoc.viewState.currentTool == .polygon || activeDoc.viewState.currentTool == .star,
+           event.keyCode == 126 || event.keyCode == 125 {
+            // Illustrator: Up/Down arrow while dragging a polygon or star adds/removes a side/point.
+            let tool = activeDoc.viewState.currentTool
+            let delta = event.keyCode == 126 ? 1 : -1
+            let base: Int
+            if tool == .polygon {
+                base = 6
+            } else {
+                switch ToolGroupManager.shared.selectedVariant {
+                case .threePoint: base = 3
+                case .fourPoint: base = 4
+                case .fivePoint: base = 5
+                case .sixPoint: base = 6
+                case .sevenPoint: base = 7
+                }
+            }
+            let adjusted = activeDoc.viewState.radialCountAdjustment[tool, default: 0] + delta
+            activeDoc.viewState.radialCountAdjustment[tool] = max(3 - base, min(100, adjusted))
+            return nil
+        }
+        if event.type == .keyDown,
            let characters = event.charactersIgnoringModifiers,
            characters == " " {
             if activeDoc.viewState.isShapeDrawingInProgress {

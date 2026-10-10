@@ -8,7 +8,8 @@ extension DrawingCanvas {
     internal func radialShapePath(tool: DrawingTool, center: CGPoint, cursor: CGPoint) -> VectorPath? {
         let sides: Int
         switch tool {
-        case .polygon, .hexagon: sides = 6
+        case .polygon: sides = max(3, 6 + (document.viewState.radialCountAdjustment[.polygon] ?? 0))
+        case .hexagon: sides = 6
         case .pentagon: sides = 5
         case .heptagon: sides = 7
         case .octagon: sides = 8
@@ -25,7 +26,7 @@ extension DrawingCanvas {
 
         var elements: [PathElement] = []
         if sides == 0 {
-            let points: Int
+            var points: Int
             let innerRatio: Double
             switch ToolGroupManager.shared.selectedVariant {
             case .threePoint: points = 3; innerRatio = 0.22
@@ -34,6 +35,7 @@ extension DrawingCanvas {
             case .sixPoint: points = 6; innerRatio = 0.40
             case .sevenPoint: points = 7; innerRatio = 0.40
             }
+            points = max(3, points + (document.viewState.radialCountAdjustment[.star] ?? 0))
             let step = Double.pi / Double(points)
             for i in 0..<(points * 2) {
                 let angle = firstAngle + Double(i) * step

@@ -30,6 +30,9 @@ class DocumentViewState: ObservableObject {
     var isSpaceHeldDuringShapeDrag: Bool = false
     var lastShapeDragLocation: CGPoint? = nil
 
+    /// Up/Down arrow while dragging a Polygon or Star adds/removes sides/points (Illustrator); the adjustment persists for the next shape.
+    var radialCountAdjustment: [DrawingTool: Int] = [:]
+
     @Published var scalingAnchor: ScalingAnchor = .center
     @Published var rotationAnchor: RotationAnchor = .center
     @Published var shearAnchor: ShearAnchor = .center
