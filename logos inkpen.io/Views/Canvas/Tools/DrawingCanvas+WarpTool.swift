@@ -26,6 +26,12 @@ extension DrawingCanvas {
             return
         }
         warpBrushCenterScreen = value.location
+        if document.viewState.currentTool.isLiquifyTool {
+            session.lastPoint = current
+            warpToolSession = session
+            startLiquifyTimer()
+            return
+        }
         let radius = warpBrushRadius
         let delta = CGPoint(x: current.x - session.lastPoint.x, y: current.y - session.lastPoint.y)
         let length = hypot(delta.x, delta.y)
@@ -38,7 +44,7 @@ extension DrawingCanvas {
                                  y: session.lastPoint.y + delta.y * CGFloat(step) / CGFloat(steps))
             for id in warpCandidateIDs(center: center, radius: radius) {
                 guard let object = document.snapshot.objects[id], case .shape(let shape) = object.objectType,
-                      let warped = warpedElements(shape.path.elements, center: center, radius: radius, delta: stepDelta) else { continue }
+                      let warped = warpedElements(shape.path.elements, center: center, radius: radius, push: { warpPush($0, center: center, radius: radius, delta: stepDelta) }) else { continue }
                 if session.originals[id] == nil { session.originals[id] = shape }
                 document.updateShapeByID(id, silent: true) { target in
                     target.path.elements = warped
@@ -55,6 +61,8 @@ extension DrawingCanvas {
     }
 
     internal func finishWarpToolDrag() {
+        liquifyTimer?.invalidate()
+        liquifyTimer = nil
         defer {
             warpToolSession = nil
             warpBrushCenterScreen = nil
@@ -71,7 +79,7 @@ extension DrawingCanvas {
 
     @ViewBuilder
     internal func warpBrushOverlay() -> some View {
-        if document.viewState.currentTool == .warp, let center = warpBrushCenterScreen ?? currentMouseLocation {
+        if document.viewState.currentTool == .warp || document.viewState.currentTool.isLiquifyTool, let center = warpBrushCenterScreen ?? currentMouseLocation {
             let diameter = warpBrushRadius * 2 * CGFloat(zoomLevel)
             Circle()
                 .stroke(Color.black, style: SwiftUI.StrokeStyle(lineWidth: 1, dash: [4, 3]))
@@ -103,7 +111,7 @@ extension DrawingCanvas {
 
     /// Pushes every anchor and handle within `radius` of `center` by `delta` (smooth falloff), adding points
     /// where the brush crosses long segments. nil when nothing moved.
-    private func warpedElements(_ elements: [PathElement], center: CGPoint, radius: CGFloat, delta: CGPoint) -> [PathElement]? {
+    private func warpedElements(_ elements: [PathElement], center: CGPoint, radius: CGFloat, push: (CGPoint) -> CGPoint) -> [PathElement]? {
         var chunks: [[PathElement]] = []
         for element in elements {
             if case .move = element { chunks.append([element]) } else if !chunks.isEmpty { chunks[chunks.count - 1].append(element) }
@@ -130,10 +138,10 @@ extension DrawingCanvas {
                         seg.c2 = CGPoint(x: seg.p0.x + (seg.p3.x - seg.p0.x) * 2 / 3, y: seg.p0.y + (seg.p3.y - seg.p0.y) * 2 / 3)
                         seg.isLine = false
                     }
-                    seg.p0 = warpPush(seg.p0, center: center, radius: radius, delta: delta)
-                    seg.c1 = warpPush(seg.c1, center: center, radius: radius, delta: delta)
-                    seg.c2 = warpPush(seg.c2, center: center, radius: radius, delta: delta)
-                    seg.p3 = warpPush(seg.p3, center: center, radius: radius, delta: delta)
+                    seg.p0 = push(seg.p0)
+                    seg.c1 = push(seg.c1)
+                    seg.c2 = push(seg.c2)
+                    seg.p3 = push(seg.p3)
                     moved = true
                     out.append(seg)
                 }
@@ -146,6 +154,59 @@ extension DrawingCanvas {
             }
         }
         return changed ? result : nil
+    }
+
+    /// Twirl / Pucker / Bloat: while the mouse is held the objects under the brush keep being reshaped,
+    /// even when the mouse stands still (Illustrator behaviour).
+    private func startLiquifyTimer() {
+        guard liquifyTimer == nil else { return }
+        liquifyTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { _ in
+            applyLiquifyTick()
+        }
+    }
+
+    internal func applyLiquifyTick() {
+        guard var session = warpToolSession, !session.resizingBrush else { return }
+        let tool = document.viewState.currentTool
+        guard tool.isLiquifyTool else { return }
+        let center = session.lastPoint
+        let radius = warpBrushRadius
+        let push: (CGPoint) -> CGPoint = { point in
+            let dx = point.x - center.x
+            let dy = point.y - center.y
+            let d = hypot(dx, dy)
+            guard d < radius else { return point }
+            let t = d / radius
+            let falloff = (1 - t * t) * (1 - t * t)
+            switch tool {
+            case .twirl:
+                // counter-clockwise on screen (the canvas y axis points down)
+                let angle = -0.07 * falloff
+                let c = cos(angle), s = sin(angle)
+                return CGPoint(x: center.x + dx * c - dy * s, y: center.y + dx * s + dy * c)
+            case .pucker:
+                let k = 1 - 0.05 * falloff
+                return CGPoint(x: center.x + dx * k, y: center.y + dy * k)
+            default:
+                let k = 1 + 0.05 * falloff
+                return CGPoint(x: center.x + dx * k, y: center.y + dy * k)
+            }
+        }
+        var affectedLayers = Set<Int>()
+        for id in warpCandidateIDs(center: center, radius: radius) {
+            guard let object = document.snapshot.objects[id], case .shape(let shape) = object.objectType,
+                  let warped = warpedElements(shape.path.elements, center: center, radius: radius, push: push) else { continue }
+            if session.originals[id] == nil { session.originals[id] = shape }
+            document.updateShapeByID(id, silent: true) { target in
+                target.path.elements = warped
+                target.anchorTypes = [:]
+                target.isRoundedRectangle = false
+                target.updateBounds()
+            }
+            affectedLayers.insert(object.layerIndex)
+        }
+        warpToolSession = session
+        document.triggerLayerUpdates(for: affectedLayers)
     }
 
     private func warpPush(_ point: CGPoint, center: CGPoint, radius: CGFloat, delta: CGPoint) -> CGPoint {

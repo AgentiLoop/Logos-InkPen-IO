@@ -137,6 +137,7 @@ struct DrawingCanvas: View {
     @State internal var gradientToolSession: GradientToolSession? = nil
     @State internal var warpToolSession: WarpToolSession? = nil
     @State internal var warpBrushRadius: CGFloat = 50
+    @State internal var liquifyTimer: Timer? = nil
     @State internal var warpBrushCenterScreen: CGPoint? = nil
     @State internal var zoomMarqueeRect: CGRect? = nil
     @State internal var isolatedGroupDisplayID: UUID? = nil

@@ -11,7 +11,7 @@ struct ToolGroupConfiguration {
         "polygons": [.pentagon, .hexagon, .heptagon, .octagon, .nonagon],
         "lines": [.bezierPen, .curvature, .line],
         "brushes": [.brush, .blobBrush, .marker, .freehand, .smooth],
-        "transforms": [.scale, .rotate, .reflect, .shear, .warp],
+        "transforms": [.scale, .rotate, .reflect, .shear, .warp, .twirl, .pucker, .bloat],
         "stars": [.star],
         "scissors": [.scissors, .knife, .eraser],
         "shapeBuilder": [.shapeBuilder],

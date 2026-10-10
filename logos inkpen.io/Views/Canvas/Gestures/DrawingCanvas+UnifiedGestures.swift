@@ -62,7 +62,7 @@ extension DrawingCanvas {
                 document.viewState.selectedObjectIDs = previousSelection
                 document.viewState.transformToolOrigin = canvasLocation
             }
-        case .selection, .warp, .cornerRadius:
+        case .selection, .warp, .twirl, .pucker, .bloat, .cornerRadius:
             handleSelectionTap(at: canvasLocation)
         case .directSelection:
             handleDirectSelectionTap(at: canvasLocation)
@@ -215,7 +215,7 @@ extension DrawingCanvas {
             break
         case .scale, .rotate, .reflect, .shear:
             handleTransformToolDrag(value: value, geometry: geometry)
-        case .warp:
+        case .warp, .twirl, .pucker, .bloat:
             handleWarpToolDrag(value: value, geometry: geometry)
         case .gradient:
             handleGradientToolDrag(value: value, geometry: geometry)
@@ -298,7 +298,7 @@ extension DrawingCanvas {
             break
         case .scale, .rotate, .reflect, .shear:
             finishTransformToolDrag()
-        case .warp:
+        case .warp, .twirl, .pucker, .bloat:
             finishWarpToolDrag()
         case .gradient:
             finishGradientToolDrag()

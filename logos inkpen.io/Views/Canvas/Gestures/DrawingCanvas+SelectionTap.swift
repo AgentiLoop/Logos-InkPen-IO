@@ -75,7 +75,8 @@ extension DrawingCanvas {
               document.viewState.currentTool == .rotate ||
               document.viewState.currentTool == .reflect ||
               document.viewState.currentTool == .shear ||
-              document.viewState.currentTool == .warp else {
+              document.viewState.currentTool == .warp ||
+              document.viewState.currentTool.isLiquifyTool else {
             if !isShiftPressed && !isCommandPressed {
                 document.clearSelectionWithUndo()
             }

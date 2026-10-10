@@ -50,6 +50,9 @@ enum DrawingTool: String, CaseIterable, Codable {
     case curvature = "Curvature"
     case shapeBuilder = "Shape Builder"
     case blobBrush = "Blob Brush"
+    case twirl = "Twirl"
+    case pucker = "Pucker"
+    case bloat = "Bloat"
 
     var iconName: String {
         switch self {
@@ -102,6 +105,14 @@ enum DrawingTool: String, CaseIterable, Codable {
         case .curvature: return "point.topleft.down.to.point.bottomright.curvepath"
         case .shapeBuilder: return "square.on.square.intersection.dashed"
         case .blobBrush: return "paintbrush.pointed.fill"
+        case .twirl: return "tornado"
+        case .pucker: return "arrow.down.right.and.arrow.up.left"
+        case .bloat: return "arrow.up.left.and.arrow.down.right"
         }
     }
+}
+
+extension DrawingTool {
+    /// Twirl, Pucker and Bloat share the Warp tool's brush and keep reshaping while the mouse is held.
+    var isLiquifyTool: Bool { self == .twirl || self == .pucker || self == .bloat }
 }

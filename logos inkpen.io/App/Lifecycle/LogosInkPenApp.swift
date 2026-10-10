@@ -571,6 +571,18 @@ struct logos_inken_ioApp: App {
                     }
                     .keyboardShortcut("r", modifiers: [.shift])
                     .help("Switch to warp tool")
+                    Button("Twirl Tool") {
+                        documentState?.switchToTool(.twirl)
+                    }
+                    .help("Switch to twirl tool")
+                    Button("Pucker Tool") {
+                        documentState?.switchToTool(.pucker)
+                    }
+                    .help("Switch to pucker tool")
+                    Button("Bloat Tool") {
+                        documentState?.switchToTool(.bloat)
+                    }
+                    .help("Switch to bloat tool")
                     Divider()
                     Button("Bezier Pen Tool") {
                         documentState?.switchToTool(.bezierPen)
