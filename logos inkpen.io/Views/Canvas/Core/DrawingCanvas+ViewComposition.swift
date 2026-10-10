@@ -478,6 +478,13 @@ extension DrawingCanvas {
                       isBezierDrawing else { return }
                 finishBezierPath()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .penToolRemoveLastAnchorRequested)) { notification in
+                guard (notification.object as? VectorDocument) === document,
+                      document.viewState.currentTool == .bezierPen,
+                      isBezierDrawing, !isDraggingBezierHandle,
+                      let result = notification.userInfo?["handled"] as? PenRequestResult else { return }
+                result.handled = removeLastBezierAnchor()
+            }
             .onReceive(NotificationCenter.default.publisher(for: .exitIsolationRequested)) { notification in
                 guard (notification.object as? VectorDocument) === document else { return }
                 exitIsolation()

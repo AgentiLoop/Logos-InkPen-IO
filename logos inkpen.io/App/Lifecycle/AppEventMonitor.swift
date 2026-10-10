@@ -4,6 +4,13 @@ import AppKit
 extension Notification.Name {
     /// Posted (object: VectorDocument) when Return/Enter/Esc should end the pen path in progress.
     static let penToolEndPathRequested = Notification.Name("penToolEndPathRequested")
+    /// Posted (object: VectorDocument, userInfo["handled"]: PenRequestResult) when Delete/Backspace should remove the last pen anchor.
+    static let penToolRemoveLastAnchorRequested = Notification.Name("penToolRemoveLastAnchorRequested")
+}
+
+/// Filled in synchronously by the canvas so the key monitor knows whether it consumed the key.
+final class PenRequestResult {
+    var handled = false
 }
 
 final class AppEventMonitor {
@@ -88,6 +95,15 @@ final class AppEventMonitor {
            event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {
             NotificationCenter.default.post(name: .penToolEndPathRequested, object: activeDoc)
             return nil
+        }
+        if event.type == .keyDown,
+           activeDoc.viewState.currentTool == .bezierPen,
+           event.keyCode == 51 || event.keyCode == 117,
+           event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {
+            // Illustrator: Delete/Backspace while drawing removes the last anchor placed.
+            let result = PenRequestResult()
+            NotificationCenter.default.post(name: .penToolRemoveLastAnchorRequested, object: activeDoc, userInfo: ["handled": result])
+            if result.handled { return nil }
         }
         if event.type == .keyDown,
            activeDoc.viewState.currentTool == .eraser,

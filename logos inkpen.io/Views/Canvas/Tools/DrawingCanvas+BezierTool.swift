@@ -21,6 +21,23 @@ extension DrawingCanvas {
         currentShapeId = nil
     }
 
+    /// Illustrator: Delete/Backspace while drawing with the Pen removes the last anchor placed.
+    /// Returns false (key not consumed) when only the first anchor exists.
+    @discardableResult
+    internal func removeLastBezierAnchor() -> Bool {
+        guard isBezierDrawing, bezierPoints.count >= 2 else { return false }
+        let removedIndex = bezierPoints.count - 1
+        bezierPoints.removeLast()
+        bezierHandles.removeValue(forKey: removedIndex)
+        liveBezierHandles.removeValue(forKey: removedIndex)
+        originalBezierHandles.removeValue(forKey: removedIndex)
+        activeBezierPointIndex = bezierPoints.count - 1
+        showClosePathHint = false
+        updatePathWithHandles()
+        updateActiveBezierShapeInDocument(isLiveDrag: true)
+        return true
+    }
+
     internal func distance(_ p1: CGPoint, _ p2: CGPoint) -> Double {
         return p1.distance(to: p2)
     }
