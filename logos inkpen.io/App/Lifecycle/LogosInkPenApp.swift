@@ -535,6 +535,11 @@ struct logos_inken_ioApp: App {
                     }
                     .keyboardShortcut("a", modifiers: [])
                     .help("Switch to direct selection tool")
+                    Button("Lasso Tool") {
+                        documentState?.switchToTool(.lasso)
+                    }
+                    .keyboardShortcut("q", modifiers: [])
+                    .help("Switch to lasso tool")
                     Button("Convert Anchor Point Tool") {
                         documentState?.switchToTool(.convertAnchorPoint)
                     }

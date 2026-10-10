@@ -106,6 +106,23 @@ extension DrawingCanvas {
                 )
             }
         }
+        if let preview = lassoPreviewPath {
+            Canvas { context, size in
+                context.translateBy(x: canvasOffset.x, y: canvasOffset.y)
+                context.scaleBy(x: zoomLevel, y: zoomLevel)
+                var path = Path { path in
+                    addPathElements(preview.elements, to: &path)
+                }
+                path.closeSubpath()
+                context.fill(path, with: .color(Color.blue.opacity(0.08)))
+                context.stroke(
+                    path,
+                    with: .color(Color.black),
+                    style: SwiftUI.StrokeStyle(lineWidth: max(1.0, 1.0 / zoomLevel), lineCap: .round, lineJoin: .round, dash: [4 / zoomLevel, 3 / zoomLevel])
+                )
+            }
+            .allowsHitTesting(false)
+        }
         if let preview = eraserPreviewPath {
             Canvas { context, size in
                 context.translateBy(x: canvasOffset.x, y: canvasOffset.y)

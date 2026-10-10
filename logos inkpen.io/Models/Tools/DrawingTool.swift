@@ -45,6 +45,7 @@ enum DrawingTool: String, CaseIterable, Codable {
     case scissors = "Scissors"
     case knife = "Knife"
     case eraser = "Eraser"
+    case lasso = "Lasso"
 
     var iconName: String {
         switch self {
@@ -92,6 +93,7 @@ enum DrawingTool: String, CaseIterable, Codable {
         case .scissors: return "scissors"
         case .knife: return "line.diagonal"
         case .eraser: return "eraser"
+        case .lasso: return "lasso"
         }
     }
 }

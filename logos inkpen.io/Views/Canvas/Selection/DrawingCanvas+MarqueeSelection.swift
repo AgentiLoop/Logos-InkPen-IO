@@ -59,13 +59,18 @@ extension DrawingCanvas {
     }
 
     private func objectIDsTouching(_ rect: CGRect) -> Set<UUID> {
+        objectIDsSelectable { object, shape in marqueeTouches(object: object, shape: shape, rect: rect) }
+    }
+
+    /// Every top-level (or isolated-group member) object that the selection tools may pick and `touches` accepts.
+    internal func objectIDsSelectable(where touches: (VectorObject, VectorShape) -> Bool) -> Set<UUID> {
         if let isolatedID = document.viewState.isolatedGroupID {
             var isolated = Set<UUID>()
             for memberID in document.snapshot.objects[isolatedID]?.shape.memberIDs ?? [] {
                 guard let object = document.snapshot.objects[memberID] else { continue }
                 let shape = object.shape
                 if !shape.isVisible || shape.isLocked { continue }
-                if marqueeTouches(object: object, shape: shape, rect: rect) { isolated.insert(memberID) }
+                if touches(object, shape) { isolated.insert(memberID) }
             }
             return isolated
         }
@@ -88,7 +93,7 @@ extension DrawingCanvas {
                 if shape.name == "Canvas Background" || shape.name == "Pasteboard Background" { continue }
                 if !shape.isVisible || shape.isLocked || shape.clippedByShapeID != nil { continue }
                 if case .guide = object.objectType { continue }
-                if marqueeTouches(object: object, shape: shape, rect: rect) {
+                if touches(object, shape) {
                     result.insert(objectID)
                 }
             }
@@ -96,7 +101,7 @@ extension DrawingCanvas {
         return result
     }
 
-    private func marqueeTouches(object: VectorObject, shape: VectorShape, rect: CGRect) -> Bool {
+    internal func marqueeTouches(object: VectorObject, shape: VectorShape, rect: CGRect) -> Bool {
         if case .text = object.objectType {
             let textBounds: CGRect
             if let position = shape.textPosition, let size = shape.areaSize {

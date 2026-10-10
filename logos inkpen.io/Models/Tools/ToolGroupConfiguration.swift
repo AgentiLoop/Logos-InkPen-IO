@@ -4,6 +4,7 @@ struct ToolGroupConfiguration {
     static let toolGroupConfig: [String: [DrawingTool]] = [
         "selection": [.selection, .cornerRadius],
         "directSelection": [.directSelection, .convertAnchorPoint, .penPlusMinus],
+        "lasso": [.lasso],
         "rectangles": [.rectangle, .square, .roundedRectangle, .pill],
         "circles": [.ellipse, .oval, .circle, .egg],
         "triangles": [.equilateralTriangle, .rightTriangle, .acuteTriangle, .cone],
@@ -39,6 +40,7 @@ struct ToolGroupConfiguration {
         let orderedGroupNames = [
             "selection",
             "directSelection",
+            "lasso",
             "lines",
             "transforms",
             "brushes",

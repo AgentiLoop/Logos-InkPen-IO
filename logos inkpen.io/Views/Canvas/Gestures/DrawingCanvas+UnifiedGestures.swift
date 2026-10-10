@@ -169,6 +169,11 @@ extension DrawingCanvas {
                 handleKnifeDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
             }
             handleKnifeDragUpdate(at: screenToCanvas(value.location, geometry: geometry))
+        case .lasso:
+            if lassoPoints.isEmpty {
+                handleLassoDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
+            }
+            handleLassoDragUpdate(at: screenToCanvas(value.location, geometry: geometry))
         case .eraser:
             if eraserPoints.isEmpty {
                 handleEraserDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
@@ -246,6 +251,8 @@ extension DrawingCanvas {
             handleFreehandDragEnd()
         case .knife:
             handleKnifeDragEnd()
+        case .lasso:
+            handleLassoDragEnd()
         case .eraser:
             handleEraserDragEnd()
         case .brush:
