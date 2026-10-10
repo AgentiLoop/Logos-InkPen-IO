@@ -85,10 +85,14 @@ extension DrawingCanvas {
         let preciseZoom = Double(zoomLevel)
         let preciseTranslationX = Double(value.translation.width)
         let preciseTranslationY = Double(value.translation.height)
-        let delta = CGPoint(
+        let rawDelta = CGPoint(
             x: preciseTranslationX / preciseZoom,
             y: preciseTranslationY / preciseZoom
         )
+        // Illustrator: Shift constrains an anchor drag to multiples of 45 degrees (handles are
+        // constrained around their anchor below).
+        let isShiftHeld = isShiftPressed || NSEvent.modifierFlags.contains(.shift)
+        let delta = (isShiftHeld && selectedHandles.isEmpty) ? constrainDeltaTo45Degrees(rawDelta) : rawDelta
         var snappedDelta = delta
         if (document.gridSettings.snapToPoint || document.gridSettings.snapToGrid) && !selectedPoints.isEmpty {
             if let firstPointID = selectedPoints.first,
@@ -122,10 +126,14 @@ extension DrawingCanvas {
         if shouldDragHandles {
             for handleID in selectedHandles {
             if let originalPosition = originalHandlePositions[handleID] {
-                let newPosition = CGPoint(
+                var newPosition = CGPoint(
                     x: originalPosition.x + delta.x,
                     y: originalPosition.y + delta.y
                 )
+                if isShiftHeld, let anchor = anchorPosition(forHandle: handleID) {
+                    let offset = constrainDeltaTo45Degrees(CGPoint(x: newPosition.x - anchor.x, y: newPosition.y - anchor.y))
+                    newPosition = CGPoint(x: anchor.x + offset.x, y: anchor.y + offset.y)
+                }
                 liveHandlePositions[handleID] = newPosition
                 if !isOptionPressed && isPointSmooth(handleID: handleID) {
                     updateLiveLinkedHandle(handleID: handleID, newPosition: newPosition)
@@ -133,6 +141,20 @@ extension DrawingCanvas {
             }
             }
         }
+    }
+
+    /// Anchor that owns a handle: control2 belongs to its own element's end point, control1 to the previous element's.
+    private func anchorPosition(forHandle handleID: HandleID) -> CGPoint? {
+        guard let object = document.snapshot.objects[handleID.shapeID],
+              case .shape(let shape) = object.objectType else { return nil }
+        let elements = shape.path.elements
+        let anchorIndex = handleID.handleType == .control2 ? handleID.elementIndex : handleID.elementIndex - 1
+        guard anchorIndex >= 0, anchorIndex < elements.count else { return nil }
+        let anchor = elements[anchorIndex].endpointCGPoint
+        if let livePoint = livePointPositions[PointID(shapeID: handleID.shapeID, pathIndex: 0, elementIndex: anchorIndex)] {
+            return livePoint
+        }
+        return anchor
     }
 
     private func isCoincidentPointSmooth(elements: [PathElement], handleID: HandleID) -> Bool {

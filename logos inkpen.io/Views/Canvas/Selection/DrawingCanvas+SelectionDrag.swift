@@ -106,7 +106,7 @@ extension DrawingCanvas {
     }
 
     /// Illustrator: Shift while dragging constrains movement to multiples of 45 degrees.
-    private func constrainDeltaTo45Degrees(_ delta: CGPoint) -> CGPoint {
+    internal func constrainDeltaTo45Degrees(_ delta: CGPoint) -> CGPoint {
         let length = hypot(delta.x, delta.y)
         guard length > 0 else { return delta }
         let step = CGFloat.pi / 4
