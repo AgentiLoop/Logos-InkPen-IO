@@ -48,6 +48,7 @@ extension DrawingCanvas {
             }
             isDrawing = true
             document.viewState.isShapeDrawingInProgress = true
+            document.viewState.starDragInnerRadius = nil
             document.viewState.lastShapeDragLocation = value.startLocation
             shapeDragStart = value.startLocation
             var initialPoint = startLocation

@@ -190,6 +190,7 @@ final class AppEventMonitor {
                 activeDoc.viewState.currentTool = .hand
             }
             else if cmdPressed && !isSpacebarPressed && temporaryTool == nil
+                        && !(activeDoc.viewState.isShapeDrawingInProgress && activeDoc.viewState.currentTool == .star)
                         && activeDoc.viewState.currentTool != .selection && activeDoc.viewState.currentTool != .directSelection {
                 let selectionTool = activeDoc.viewState.lastSelectionTool
                 previousTool = activeDoc.viewState.currentTool

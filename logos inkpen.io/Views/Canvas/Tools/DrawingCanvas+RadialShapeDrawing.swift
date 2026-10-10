@@ -37,9 +37,17 @@ extension DrawingCanvas {
             }
             points = max(3, points + (document.viewState.radialCountAdjustment[.star] ?? 0))
             let step = Double.pi / Double(points)
+            // Command held: keep the inner radius where it was, only the outer radius follows the cursor.
+            let innerRadius: Double
+            if NSEvent.modifierFlags.contains(.command), let locked = document.viewState.starDragInnerRadius {
+                innerRadius = locked
+            } else {
+                innerRadius = radius * innerRatio
+                document.viewState.starDragInnerRadius = innerRadius
+            }
             for i in 0..<(points * 2) {
                 let angle = firstAngle + Double(i) * step
-                let r = i % 2 == 0 ? radius : radius * innerRatio
+                let r = i % 2 == 0 ? radius : innerRadius
                 let point = VectorPoint(center.x + cos(angle) * r, center.y + sin(angle) * r)
                 elements.append(i == 0 ? .move(to: point) : .line(to: point))
             }

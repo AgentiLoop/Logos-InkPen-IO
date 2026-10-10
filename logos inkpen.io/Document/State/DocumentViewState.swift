@@ -33,6 +33,9 @@ class DocumentViewState: ObservableObject {
     /// Up/Down arrow while dragging a Polygon or Star adds/removes sides/points (Illustrator); the adjustment persists for the next shape.
     var radialCountAdjustment: [DrawingTool: Int] = [:]
 
+    /// Inner radius of the star being dragged; Command-drag keeps it constant while the outer radius follows the cursor (Illustrator).
+    var starDragInnerRadius: Double? = nil
+
     @Published var scalingAnchor: ScalingAnchor = .center
     @Published var rotationAnchor: RotationAnchor = .center
     @Published var shearAnchor: ShearAnchor = .center
