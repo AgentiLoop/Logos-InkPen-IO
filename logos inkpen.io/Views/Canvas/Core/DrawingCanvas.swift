@@ -105,6 +105,7 @@ struct DrawingCanvas: View {
     @State internal var markerPreviewPath: VectorPath? = nil
     @State internal var previousTool: DrawingTool = .selection
     @State internal var isTemporaryHandToolActive = false
+    @State internal var isRotateCursorShown = false
     @State internal var temporaryToolPreviousTool: DrawingTool? = nil
     @State internal var isTemporarySelectionViaCommand = false
     @State internal var initialZoomLevel: CGFloat = 1.0

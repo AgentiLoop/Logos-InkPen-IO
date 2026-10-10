@@ -19,6 +19,13 @@ extension DrawingCanvas {
                 EyedropperCursor.set()
             } else if document.viewState.currentTool == .zoom {
                 MagnifyingGlassCursor.set()
+            } else if document.viewState.currentTool == .selection, !isDrawing, !isPanGestureActive,
+                      isInSelectionBoxRotateZone(screenToCanvas(location, geometry: geometry)) {
+                RotateCursor.set()
+                isRotateCursorShown = true
+            } else if isRotateCursorShown {
+                NSCursor.arrow.set()
+                isRotateCursorShown = false
             }
             #endif
             if isBezierDrawing && document.viewState.currentTool == .bezierPen && bezierPoints.count > 0 {

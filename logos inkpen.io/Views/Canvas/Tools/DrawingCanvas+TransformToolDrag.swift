@@ -110,21 +110,25 @@ extension DrawingCanvas {
             return true
         }
         guard transformToolSession == nil, selectionMarqueeRect == nil, !isDrawing, !document.isHandleScalingActive,
-              !document.viewState.selectedObjectIDs.isEmpty,
-              let bounds = document.selectionUnionBounds() else { return false }
-        let startCanvas = screenToCanvas(value.startLocation, geometry: geometry)
-        let zoom = max(CGFloat(zoomLevel), 0.0001)
-        let inner = bounds.insetBy(dx: -8 / zoom, dy: -8 / zoom)
-        guard !inner.contains(startCanvas) else { return false }
-        let reach = 32 / zoom
-        let corners = [CGPoint(x: bounds.minX, y: bounds.minY), CGPoint(x: bounds.maxX, y: bounds.minY),
-                       CGPoint(x: bounds.maxX, y: bounds.maxY), CGPoint(x: bounds.minX, y: bounds.maxY)]
-        guard corners.contains(where: { hypot($0.x - startCanvas.x, $0.y - startCanvas.y) <= reach }) else { return false }
-        if findObjectAtLocationOptimized(startCanvas) != nil { return false }
+              isInSelectionBoxRotateZone(screenToCanvas(value.startLocation, geometry: geometry)) else { return false }
         guard let session = makeTransformSession() else { return false }
         session.rotatesFromSelectionBox = true
         transformToolSession = session
         return handleSelectionBoxRotateDrag(value: value, geometry: geometry)
+    }
+
+    /// True when `canvasPoint` lies just outside a corner of the selection box, where the Selection tool rotates.
+    internal func isInSelectionBoxRotateZone(_ canvasPoint: CGPoint) -> Bool {
+        guard !document.viewState.selectedObjectIDs.isEmpty,
+              let bounds = document.selectionUnionBounds() else { return false }
+        let zoom = max(CGFloat(zoomLevel), 0.0001)
+        let inner = bounds.insetBy(dx: -8 / zoom, dy: -8 / zoom)
+        guard !inner.contains(canvasPoint) else { return false }
+        let reach = 32 / zoom
+        let corners = [CGPoint(x: bounds.minX, y: bounds.minY), CGPoint(x: bounds.maxX, y: bounds.minY),
+                       CGPoint(x: bounds.maxX, y: bounds.maxY), CGPoint(x: bounds.minX, y: bounds.maxY)]
+        guard corners.contains(where: { hypot($0.x - canvasPoint.x, $0.y - canvasPoint.y) <= reach }) else { return false }
+        return findObjectAtLocationOptimized(canvasPoint) == nil
     }
 
     internal func finishTransformToolDrag() {

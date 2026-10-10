@@ -43,6 +43,10 @@ let MagnifyingGlassCursor: NSCursor = {
     return makeHaloCursor(symbolName: "magnifyingglass", pointSize: 18, originalHotspot: center)
 }()
 
+let RotateCursor: NSCursor = {
+    makeHaloCursor(symbolName: "arrow.triangle.2.circlepath", pointSize: 16, originalHotspot: CGPoint(x: 8, y: 8))
+}()
+
 let HandOpenCursor: NSCursor = {
     let originalHotspot = CGPoint(x: 9, y: 9)
     return makeHaloCursor(symbolName: "hand.raised", pointSize: 18, originalHotspot: originalHotspot)
