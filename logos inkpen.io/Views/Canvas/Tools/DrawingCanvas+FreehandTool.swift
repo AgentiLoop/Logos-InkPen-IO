@@ -137,6 +137,7 @@ extension DrawingCanvas {
 
     private func updateFinalFreehandShape(with smoothPath: VectorPath) {
         if let target = freehandContinueTarget, mergeFreehandStroke(smoothPath, into: target) { return }
+        if freehandContinueTarget == nil, reshapeSelectedPathWithFreehand(smoothPath) { return }
         var strokeColor = getCurrentStrokeColor()
         var fillColor = getCurrentFillColor()
         if strokeColor == .clear {
