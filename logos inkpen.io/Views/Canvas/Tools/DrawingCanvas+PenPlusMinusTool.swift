@@ -252,10 +252,12 @@ extension DrawingCanvas {
                 if !shape.isVisible || shape.isLocked { continue }
                 if let restrictedTo, !restrictedTo.contains(shape.id) { continue }
                 var previousPoint: VectorPoint?
+                var subpathStart: VectorPoint?
                 for (elementIndex, element) in shape.path.elements.enumerated() {
                     switch element {
                     case .move(let to):
                         previousPoint = to
+                        subpathStart = to
                     case .line(let to):
                         if let prev = previousPoint {
                             let start = CGPoint(x: prev.x, y: prev.y).applying(shape.transform)
@@ -280,8 +282,7 @@ extension DrawingCanvas {
                         previousPoint = to
                     case .close:
                         if let prev = previousPoint,
-                           let firstPoint = shape.path.elements.first,
-                           case .move(let firstTo) = firstPoint {
+                           let firstTo = subpathStart {
                             let start = CGPoint(x: prev.x, y: prev.y).applying(shape.transform)
                             let end = CGPoint(x: firstTo.x, y: firstTo.y).applying(shape.transform)
                             if isPointNearLineSegment(point: location, start: start, end: end, tolerance: tolerance) {

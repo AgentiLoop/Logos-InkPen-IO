@@ -207,3 +207,14 @@ func knifeCutPieces(shapePath: CGPath, fillRule: CGPathFillRule, knife: [CGPoint
     let pieces = inside.componentsSeparated(using: fillRule) + outside.componentsSeparated(using: fillRule)
     return pieces.count >= 2 ? pieces : nil
 }
+
+extension CGPath {
+    /// Number of subpaths (move-to segments) in the path.
+    var subpathCount: Int {
+        var count = 0
+        applyWithBlock { element in
+            if element.pointee.type == .moveToPoint { count += 1 }
+        }
+        return count
+    }
+}

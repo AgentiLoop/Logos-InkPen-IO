@@ -64,7 +64,7 @@ extension DrawingCanvas {
                   selected.isEmpty || selected.contains(shape.id),
                   shape.isVisible, !shape.isLocked,
                   shape.fillStyle != nil || shape.strokeStyle != nil,
-                  !shape.isGroup, !shape.isGroupContainer, !shape.isCompoundPath,
+                  !shape.isGroup, !shape.isGroupContainer,
                   !shape.isClippingPath, !shape.isWarpObject, shape.textContent == nil,
                   shape.name != "Canvas Background", shape.name != "Pasteboard Background",
                   object.layerIndex >= 0, object.layerIndex < document.snapshot.layers.count,
@@ -99,6 +99,7 @@ extension DrawingCanvas {
                     var copy = shape
                     copy.id = UUID()
                     copy.path = VectorPath(cgPath: piece, fillRule: shape.path.fillRule.cgPathFillRule)
+                    copy.isCompoundPath = shape.isCompoundPath && piece.subpathCount > 1
                     copy.updateBounds()
                     added.append(VectorObject(shape: copy, layerIndex: object.layerIndex))
                 }
@@ -123,6 +124,7 @@ extension DrawingCanvas {
                 var copy = shape
                 copy.id = UUID()
                 copy.path = VectorPath(cgPath: piece, fillRule: rule)
+                copy.isCompoundPath = shape.isCompoundPath && piece.subpathCount > 1
                 copy.updateBounds()
                 added.append(VectorObject(shape: copy, layerIndex: object.layerIndex))
             }
