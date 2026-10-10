@@ -11,8 +11,11 @@ extension DrawingCanvas {
         let tool = document.viewState.currentTool
         let boxTools: [DrawingTool] = [.rectangle, .square, .roundedRectangle, .pill, .circle, .ellipse, .oval]
         let radialTools: [DrawingTool] = [.polygon, .pentagon, .hexagon, .heptagon, .octagon, .nonagon, .star]
-        let isBox = boxTools.contains(tool)
-        guard isBox || radialTools.contains(tool) else { return }
+        // Egg and the triangles are box-style (top-left at the click); the line starts at the click.
+        let extraBoxTools: [DrawingTool] = [.egg, .isoscelesTriangle, .acuteTriangle, .rightTriangle, .equilateralTriangle]
+        let isBox = boxTools.contains(tool) || extraBoxTools.contains(tool)
+        let isLine = tool == .line
+        guard isBox || isLine || radialTools.contains(tool) else { return }
         // Guard against a duplicate tap callback firing a second dialog right after the first closes.
         guard Date().timeIntervalSince(lastShapeDialogClose) > 0.5 else { return }
         defer { lastShapeDialogClose = Date() }
@@ -34,9 +37,13 @@ extension DrawingCanvas {
             return label
         }
 
-        var rows: [(String, Double)] = isBox
-            ? (isSquareLike ? [(tool == .circle ? "Diameter:" : "Size:", 100)] : [("Width:", 100), ("Height:", 100)])
-            : [("Radius:", 50)]
+        var rows: [(String, Double)] = isLine
+            ? [("Length:", 100), ("Angle:", 0)]
+            : isBox
+                ? (isSquareLike ? [(tool == .circle ? "Diameter:" : "Size:", 100)]
+                   : tool == .equilateralTriangle ? [("Height:", 100)]
+                   : [("Width:", 100), ("Height:", 100)])
+                : [("Radius:", 50)]
         if tool == .roundedRectangle { rows.append(("Corner Radius:", 20)) }
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 190, height: CGFloat(rows.count) * 28))
         var fields: [NSTextField] = []
@@ -55,15 +62,43 @@ extension DrawingCanvas {
 
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let values = fields.map { abs(Double($0.stringValue.replacingOccurrences(of: ",", with: ".")) ?? 0) }
+        let signedAngle = isLine ? (Double(fields[1].stringValue.replacingOccurrences(of: ",", with: ".")) ?? 0) : 0
         guard let first = values.first, first > 0 else { return }
 
         let path: VectorPath?
-        if isBox {
+        if isLine {
+            // Angle is counter-clockwise from the +x axis, as in Illustrator; canvas y points down.
+            let radians = signedAngle * .pi / 180
+            let end = CGPoint(x: canvasPoint.x + first * cos(radians), y: canvasPoint.y - first * sin(radians))
+            path = VectorPath(elements: [
+                .move(to: VectorPoint(canvasPoint)),
+                .line(to: VectorPoint(end))
+            ])
+        } else if isBox {
             let width = first
             let height = isSquareLike ? first : (values.count > 1 ? values[1] : first)
             guard height > 0 else { return }
-            let rect = CGRect(x: canvasPoint.x, y: canvasPoint.y, width: width, height: height)
+            var rect = CGRect(x: canvasPoint.x, y: canvasPoint.y, width: width, height: height)
+            if tool == .equilateralTriangle {
+                let equilateralWidth = first * 2 / 3.0.squareRoot()
+                rect = CGRect(x: canvasPoint.x, y: canvasPoint.y, width: equilateralWidth, height: first)
+            }
             switch tool {
+            case .egg:
+                path = createEggPath(rect: rect)
+            case .isoscelesTriangle:
+                path = createIsoscelesTrianglePath(rect: rect)
+            case .acuteTriangle:
+                path = createAcuteTrianglePath(rect: rect)
+            case .rightTriangle:
+                path = createRightTrianglePath(rect: rect, dragDirection: "RIGHT_DOWN")
+            case .equilateralTriangle:
+                path = VectorPath(elements: [
+                    .move(to: VectorPoint(rect.midX, rect.minY)),
+                    .line(to: VectorPoint(rect.minX, rect.maxY)),
+                    .line(to: VectorPoint(rect.maxX, rect.maxY)),
+                    .close
+                ], isClosed: true)
             case .rectangle, .square:
                 path = VectorPath(elements: [
                     .move(to: VectorPoint(rect.minX, rect.minY)),
