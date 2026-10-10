@@ -39,7 +39,8 @@ extension DrawingCanvas {
         knifePreviewPath = nil
         guard knife.count >= 2 else { return }
 
-        let selected = document.viewState.selectedObjectIDs
+        let selectionBefore = document.viewState.selectedObjectIDs
+        let selected = expandedGroupMemberIDs(selectionBefore)
         var steps: [SplitPathCommand] = []
         var resultIDs: [UUID] = []
         for object in document.snapshot.objects.values {

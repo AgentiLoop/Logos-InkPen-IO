@@ -54,7 +54,8 @@ extension DrawingCanvas {
         let eraserRegion = strokeLine.copy(strokingWithWidth: size, lineCap: .round, lineJoin: .round, miterLimit: 10)
         let eraserBounds = eraserRegion.boundingBoxOfPath
 
-        let selected = document.viewState.selectedObjectIDs
+        let selectionBefore = document.viewState.selectedObjectIDs
+        let selected = expandedGroupMemberIDs(selectionBefore)
         var steps: [BaseCommand] = []
         var resultIDs: [UUID] = []
         var deletedIDs: [UUID] = []
@@ -132,10 +133,34 @@ extension DrawingCanvas {
         guard !steps.isEmpty else { return }
         document.commandManager.execute(EraserCommand(steps: steps))
         if !selected.isEmpty {
+            // A selected group stays selected; its members' pieces are only added when members were selected directly.
+            let selectedGroupsOnly = selectionBefore.count != selected.count
+            if selectedGroupsOnly { return }
             let kept = document.viewState.orderedSelectedObjectIDs.filter { !deletedIDs.contains($0) }
             let ordered = kept + resultIDs.filter { !kept.contains($0) }
             document.viewState.selectedObjectIDs = Set(ordered)
             document.viewState.orderedSelectedObjectIDs = ordered
         }
+    }
+}
+
+extension DrawingCanvas {
+    /// The selection with every selected group replaced by (or extended with) its descendant members, so tools that
+    /// act on path objects (Eraser, Knife) cut the contents of a selected group as Illustrator does.
+    internal func expandedGroupMemberIDs(_ ids: Set<UUID>) -> Set<UUID> {
+        var result = ids
+        var queue = Array(ids)
+        while let id = queue.popLast() {
+            guard let shape = document.findShape(by: id) else { continue }
+            for memberID in shape.memberIDs where !result.contains(memberID) {
+                result.insert(memberID)
+                queue.append(memberID)
+            }
+            for child in shape.groupedShapes where !result.contains(child.id) {
+                result.insert(child.id)
+                queue.append(child.id)
+            }
+        }
+        return result
     }
 }
