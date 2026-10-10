@@ -90,6 +90,13 @@ final class AppEventMonitor {
             return nil
         }
         if event.type == .keyDown,
+           event.keyCode == Self.escapeKeyCode,
+           activeDoc.viewState.isolatedGroupID != nil,
+           event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {
+            NotificationCenter.default.post(name: .exitIsolationRequested, object: activeDoc)
+            return nil
+        }
+        if event.type == .keyDown,
            let characters = event.charactersIgnoringModifiers,
            characters == " " {
             if activeDoc.viewState.isShapeDrawingInProgress {

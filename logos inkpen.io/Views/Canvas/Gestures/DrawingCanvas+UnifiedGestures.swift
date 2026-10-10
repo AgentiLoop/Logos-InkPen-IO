@@ -15,6 +15,7 @@ extension DrawingCanvas {
         default:
             break
         }
+        if handleIsolationDoubleClick(at: canvasLocation) { return }
         if let textID = findTextAt(location: canvasLocation) {
             document.viewState.currentTool = .font
             startEditingText(textID: textID, at: canvasLocation)

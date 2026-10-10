@@ -16,6 +16,9 @@ class DocumentViewState: ObservableObject {
     /// Selection tool that Cmd switches to temporarily from other tools (Illustrator: last used of Selection / Direct Selection).
     var lastSelectionTool: DrawingTool = .selection
 
+    /// Group the Selection tool has entered by double-click (Illustrator isolation mode); nil = normal editing.
+    var isolatedGroupID: UUID? = nil
+
     /// Reference point set by clicking with Rotate / Scale / Reflect / Shear (nil = centre of the selection).
     @Published var transformToolOrigin: CGPoint? = nil
 

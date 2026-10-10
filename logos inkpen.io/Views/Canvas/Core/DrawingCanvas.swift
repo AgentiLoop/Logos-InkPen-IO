@@ -114,6 +114,7 @@ struct DrawingCanvas: View {
     @State internal var transformToolSession: TransformToolSession? = nil
     @State internal var gradientToolSession: GradientToolSession? = nil
     @State internal var zoomMarqueeRect: CGRect? = nil
+    @State internal var isolatedGroupDisplayID: UUID? = nil
     @State internal var selectionMarqueeRect: CGRect? = nil
     @State internal var selectionMarqueeBase: Set<UUID> = []
     @State internal var directSelectionDragEvaluated = false

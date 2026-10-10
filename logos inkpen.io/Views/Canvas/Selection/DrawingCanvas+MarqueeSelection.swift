@@ -59,6 +59,16 @@ extension DrawingCanvas {
     }
 
     private func objectIDsTouching(_ rect: CGRect) -> Set<UUID> {
+        if let isolatedID = document.viewState.isolatedGroupID {
+            var isolated = Set<UUID>()
+            for memberID in document.snapshot.objects[isolatedID]?.shape.memberIDs ?? [] {
+                guard let object = document.snapshot.objects[memberID] else { continue }
+                let shape = object.shape
+                if !shape.isVisible || shape.isLocked { continue }
+                if marqueeTouches(object: object, shape: shape, rect: rect) { isolated.insert(memberID) }
+            }
+            return isolated
+        }
         var groupedChildIDs = Set<UUID>()
         for obj in document.snapshot.objects.values {
             switch obj.objectType {

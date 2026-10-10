@@ -41,6 +41,10 @@ extension DrawingCanvas {
     internal func findObjectAtLocationOptimized(_ location: CGPoint) -> VectorObject? {
         let validatedLocation = validateAndCorrectLocation(location)
 
+        if let isolatedID = document.viewState.isolatedGroupID {
+            return findIsolatedMember(of: isolatedID, at: validatedLocation)
+        }
+
         var groupedChildIDs = Set<UUID>()
         for obj in document.snapshot.objects.values {
             switch obj.objectType {
@@ -98,6 +102,19 @@ extension DrawingCanvas {
                 }
             }
         }
+    }
+
+    /// Isolation mode: only the direct members of the entered group can be hit; everything else is inert.
+    internal func findIsolatedMember(of groupID: UUID, at location: CGPoint) -> VectorObject? {
+        guard let groupObject = document.snapshot.objects[groupID] else { return nil }
+        let groupShape = groupObject.shape
+        for memberID in groupShape.memberIDs.reversed() {
+            guard let object = document.snapshot.objects[memberID] else { continue }
+            let shape = object.shape
+            if !shape.isVisible || shape.isLocked { continue }
+            if performShapeHitTest(shape: shape, at: location) { return object }
+        }
+        return nil
     }
 
     private func metalHitTest(at point: CGPoint, testFunction: (VectorObject, CGPoint) -> Bool) -> VectorObject? {

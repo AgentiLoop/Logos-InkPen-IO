@@ -156,6 +156,7 @@ extension DrawingCanvas {
                 liveScaleDimensions: $liveScaleDimensions
             )
         }
+        isolationOverlay()
         if let marquee = zoomMarqueeRect, document.viewState.currentTool == .zoom {
             Rectangle()
                 .stroke(Color.black, style: SwiftUI.StrokeStyle(lineWidth: 1, dash: [4, 3]))
@@ -429,6 +430,10 @@ extension DrawingCanvas {
                       document.viewState.currentTool == .bezierPen,
                       isBezierDrawing else { return }
                 finishBezierPath()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .exitIsolationRequested)) { notification in
+                guard (notification.object as? VectorDocument) === document else { return }
+                exitIsolation()
             }
             .onHover { isHovering in
                 isCanvasHovering = isHovering
