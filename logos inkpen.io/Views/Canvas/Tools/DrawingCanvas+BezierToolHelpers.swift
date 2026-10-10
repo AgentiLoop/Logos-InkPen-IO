@@ -94,6 +94,10 @@ extension DrawingCanvas {
             }
             return
         } else {
+            if let joinTarget = findPenJoinTarget(at: location) {
+                joinPenPath(with: joinTarget)
+                return
+            }
             addCornerPoint(at: constrainedLocation)
         }
     }

@@ -49,7 +49,7 @@ extension DrawingCanvas {
         return true
     }
 
-    private func reversedOpenElements(_ elements: [PathElement]) -> [PathElement] {
+    internal func reversedOpenElements(_ elements: [PathElement]) -> [PathElement] {
         guard case .move = elements.first, let lastPoint = elements.last?.endpoint else { return elements }
         var anchors: [VectorPoint] = []
         for element in elements { if let p = element.endpoint { anchors.append(p) } }
