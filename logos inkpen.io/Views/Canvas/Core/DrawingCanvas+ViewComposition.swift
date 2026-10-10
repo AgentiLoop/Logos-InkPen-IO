@@ -157,6 +157,7 @@ extension DrawingCanvas {
             )
         }
         isolationOverlay()
+        warpBrushOverlay()
         if let marquee = zoomMarqueeRect, document.viewState.currentTool == .zoom {
             Rectangle()
                 .stroke(Color.black, style: SwiftUI.StrokeStyle(lineWidth: 1, dash: [4, 3]))

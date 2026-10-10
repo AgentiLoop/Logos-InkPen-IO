@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// One path segment as a cubic (lines keep `isLine` so they are written back as lines).
-private struct ReshapeSegment {
+struct ReshapeSegment {
     var p0: CGPoint
     var c1: CGPoint
     var c2: CGPoint
@@ -117,7 +117,7 @@ extension DrawingCanvas {
     }
 
     /// Single-subpath element list -> cubic/line segments. nil for multi-subpath paths.
-    private func reshapeSegments(from elements: [PathElement]) -> (segments: [ReshapeSegment], closed: Bool)? {
+    internal func reshapeSegments(from elements: [PathElement]) -> (segments: [ReshapeSegment], closed: Bool)? {
         guard case .move(let first)? = elements.first else { return nil }
         let start = first.cgPoint
         var current = start
@@ -155,7 +155,7 @@ extension DrawingCanvas {
         return (segments, closed)
     }
 
-    private func reshapeElements(from segments: [ReshapeSegment], closed: Bool) -> [PathElement] {
+    internal func reshapeElements(from segments: [ReshapeSegment], closed: Bool) -> [PathElement] {
         var segments = segments
         // The implicit closing line is written by .close, so a trailing straight segment is dropped.
         if closed, let last = segments.last, last.isLine { segments.removeLast() }

@@ -174,7 +174,7 @@ extension DrawingCanvas {
         case .scale, .rotate, .reflect, .shear:
             handleTransformToolDrag(value: value, geometry: geometry)
         case .warp:
-            break
+            handleWarpToolDrag(value: value, geometry: geometry)
         case .gradient:
             handleGradientToolDrag(value: value, geometry: geometry)
         default:
@@ -238,6 +238,8 @@ extension DrawingCanvas {
             break
         case .scale, .rotate, .reflect, .shear:
             finishTransformToolDrag()
+        case .warp:
+            finishWarpToolDrag()
         case .gradient:
             finishGradientToolDrag()
         default:
