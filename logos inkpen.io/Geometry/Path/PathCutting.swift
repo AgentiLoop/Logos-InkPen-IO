@@ -152,3 +152,58 @@ func cuttingPath(_ elements: [PathElement], at location: PathCutLocation) -> [[P
           let tail = build(Array(segments[anchorIndex...])) else { return nil }
     return [head, tail]
 }
+
+/// Illustrator Knife: splits a filled shape along a freehand knife path (all coordinates in the shape's own space).
+/// The knife is extended past both ends and closed into a big region on its left; the shape is split into the part
+/// inside that region and the part outside it, so the cut leaves no gap. Returns nil when the knife doesn't split the shape.
+func knifeCutPieces(shapePath: CGPath, fillRule: CGPathFillRule, knife: [CGPoint]) -> [CGPath]? {
+    var points: [CGPoint] = []
+    for p in knife where points.last.map({ hypot($0.x - p.x, $0.y - p.y) > 0.001 }) ?? true {
+        points.append(p)
+    }
+    guard points.count >= 2, !shapePath.isEmpty else { return nil }
+
+    func direction(from a: CGPoint, to b: CGPoint) -> CGPoint {
+        let length = hypot(b.x - a.x, b.y - a.y)
+        return CGPoint(x: (b.x - a.x) / length, y: (b.y - a.y) / length)
+    }
+    // Use points a little way in from the ends so tiny hand jitter doesn't swing the extension.
+    let knifeBox = points.reduce(CGRect.null) { $0.union(CGRect(x: $1.x, y: $1.y, width: 0, height: 0)) }
+    let box = shapePath.boundingBoxOfPath.union(knifeBox)
+    let reach = hypot(box.width, box.height) * 2 + 10
+    let sampleDistance = max(0.001, min(reach * 0.01, hypot(knifeBox.width, knifeBox.height) * 0.25))
+    var startRef = points[1]
+    for p in points.dropFirst() where hypot(p.x - points[0].x, p.y - points[0].y) >= sampleDistance {
+        startRef = p
+        break
+    }
+    var endRef = points[points.count - 2]
+    for p in points.reversed().dropFirst() where hypot(p.x - points[points.count - 1].x, p.y - points[points.count - 1].y) >= sampleDistance {
+        endRef = p
+        break
+    }
+    let startDir = direction(from: startRef, to: points[0])   // pointing backwards out of the start
+    let endDir = direction(from: endRef, to: points[points.count - 1])  // pointing forwards out of the end
+    guard startDir.x.isFinite, endDir.x.isFinite else { return nil }
+
+    let startExt = CGPoint(x: points[0].x + startDir.x * reach, y: points[0].y + startDir.y * reach)
+    let endExt = CGPoint(x: points[points.count - 1].x + endDir.x * reach, y: points[points.count - 1].y + endDir.y * reach)
+    // Left of the travel direction (y-down screen space): rotate (dx, dy) to (dy, -dx).
+    let travelStart = CGPoint(x: -startDir.x, y: -startDir.y)
+    let leftStart = CGPoint(x: travelStart.y, y: -travelStart.x)
+    let leftEnd = CGPoint(x: endDir.y, y: -endDir.x)
+
+    let region = CGMutablePath()
+    region.move(to: startExt)
+    for p in points { region.addLine(to: p) }
+    region.addLine(to: endExt)
+    region.addLine(to: CGPoint(x: endExt.x + leftEnd.x * reach * 2, y: endExt.y + leftEnd.y * reach * 2))
+    region.addLine(to: CGPoint(x: startExt.x + leftStart.x * reach * 2, y: startExt.y + leftStart.y * reach * 2))
+    region.closeSubpath()
+
+    let inside = shapePath.intersection(region, using: fillRule)
+    let outside = shapePath.subtracting(region, using: fillRule)
+    guard !inside.isEmpty, !outside.isEmpty else { return nil }
+    let pieces = inside.componentsSeparated(using: fillRule) + outside.componentsSeparated(using: fillRule)
+    return pieces.count >= 2 ? pieces : nil
+}

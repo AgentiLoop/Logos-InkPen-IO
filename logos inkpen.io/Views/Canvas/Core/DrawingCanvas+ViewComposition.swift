@@ -92,6 +92,20 @@ extension DrawingCanvas {
                 )
             }
         }
+        if let preview = knifePreviewPath {
+            Canvas { context, size in
+                context.translateBy(x: canvasOffset.x, y: canvasOffset.y)
+                context.scaleBy(x: zoomLevel, y: zoomLevel)
+                let path = Path { path in
+                    addPathElements(preview.elements, to: &path)
+                }
+                context.stroke(
+                    path,
+                    with: .color(Color.blue),
+                    style: SwiftUI.StrokeStyle(lineWidth: max(1.0, 1.0 / zoomLevel), lineCap: .round, lineJoin: .round, dash: [4 / zoomLevel, 3 / zoomLevel])
+                )
+            }
+        }
         if let preview = markerPreviewPath {
             let markerFillColor = ApplicationSettings.shared.markerUseFillAsStroke ? getCurrentFillColor() : getCurrentStrokeColor()
             let markerStrokeColor = ApplicationSettings.shared.markerUseFillAsStroke ? getCurrentFillColor() : getCurrentStrokeColor()

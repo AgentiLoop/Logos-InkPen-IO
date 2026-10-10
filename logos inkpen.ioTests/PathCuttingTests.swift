@@ -58,3 +58,36 @@ final class PathCuttingTests: XCTestCase {
         XCTAssertEqual(Double(cut?.y ?? 0), 7.5, accuracy: 0.1)
     }
 }
+
+final class KnifeCuttingTests: XCTestCase {
+
+    private func squarePath() -> CGPath { CGPath(rect: CGRect(x: 0, y: 0, width: 10, height: 10), transform: nil) }
+
+    func testKnifeAcrossSquareGivesTwoPiecesCoveringTheSquare() {
+        let pieces = knifeCutPieces(shapePath: squarePath(), fillRule: .winding, knife: [CGPoint(x: 5, y: -3), CGPoint(x: 5, y: 13)])
+        XCTAssertEqual(pieces?.count, 2)
+        let total = (pieces ?? []).reduce(0.0) { $0 + Double($1.boundingBoxOfPath.width * $1.boundingBoxOfPath.height) }
+        XCTAssertEqual(total, 100, accuracy: 0.01)
+        let widths = (pieces ?? []).map { Double($0.boundingBoxOfPath.width) }.sorted()
+        XCTAssertEqual(widths[0], 5, accuracy: 0.01)
+        XCTAssertEqual(widths[1], 5, accuracy: 0.01)
+    }
+
+    func testKnifeThatStopsInsideStillCutsLikeInfiniteLine() {
+        let pieces = knifeCutPieces(shapePath: squarePath(), fillRule: .winding, knife: [CGPoint(x: -2, y: 5), CGPoint(x: 4, y: 5)])
+        XCTAssertEqual(pieces?.count, 2)
+    }
+
+    func testKnifeMissingShapeGivesNil() {
+        XCTAssertNil(knifeCutPieces(shapePath: squarePath(), fillRule: .winding, knife: [CGPoint(x: 20, y: -3), CGPoint(x: 20, y: 13)]))
+    }
+
+    func testKnifeAcrossUShapeGivesThreePieces() {
+        let u = CGMutablePath()
+        u.addLines(between: [CGPoint(x: 0, y: 0), CGPoint(x: 10, y: 0), CGPoint(x: 10, y: 10), CGPoint(x: 7, y: 10),
+                             CGPoint(x: 7, y: 3), CGPoint(x: 3, y: 3), CGPoint(x: 3, y: 10), CGPoint(x: 0, y: 10)])
+        u.closeSubpath()
+        let pieces = knifeCutPieces(shapePath: u, fillRule: .winding, knife: [CGPoint(x: -1, y: 6), CGPoint(x: 11, y: 6)])
+        XCTAssertEqual(pieces?.count, 3)
+    }
+}

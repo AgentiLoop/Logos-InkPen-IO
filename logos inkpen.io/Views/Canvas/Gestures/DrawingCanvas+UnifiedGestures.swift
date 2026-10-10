@@ -164,6 +164,11 @@ extension DrawingCanvas {
                 handleFreehandDragStart(at: startLocation)
             }
             handleFreehandDragUpdate(at: currentLocation)
+        case .knife:
+            if knifePoints.isEmpty {
+                handleKnifeDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
+            }
+            handleKnifeDragUpdate(at: screenToCanvas(value.location, geometry: geometry))
         case .brush:
             let currentLocation = screenToCanvas(value.location, geometry: geometry)
             if !isBrushDrawing {
@@ -234,6 +239,8 @@ extension DrawingCanvas {
             finishBezierPenDrag()
         case .freehand:
             handleFreehandDragEnd()
+        case .knife:
+            handleKnifeDragEnd()
         case .brush:
             handleBrushDragEnd()
         case .marker:

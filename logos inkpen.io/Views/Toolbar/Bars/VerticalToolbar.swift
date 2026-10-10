@@ -366,6 +366,8 @@ struct VerticalToolbar: View {
             return "Corner Radius Tool (⌥R) - Edit corner radius of rectangles"
         case .scissors:
             return "Scissors Tool (C) - Click an anchor or segment to cut the path"
+        case .knife:
+            return "Knife Tool - Drag across filled shapes to slice them into pieces"
         }
     }
 }

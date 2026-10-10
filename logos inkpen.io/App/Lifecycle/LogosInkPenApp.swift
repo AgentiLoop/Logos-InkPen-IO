@@ -726,6 +726,10 @@ struct logos_inken_ioApp: App {
                     }
                     .keyboardShortcut("c", modifiers: [])
                     .help("Switch to scissors tool")
+                    Button("Knife Tool") {
+                        documentState?.switchToTool(.knife)
+                    }
+                    .help("Switch to knife tool")
                 }
                 CommandMenu("Debug") {
                     Button(action: {
