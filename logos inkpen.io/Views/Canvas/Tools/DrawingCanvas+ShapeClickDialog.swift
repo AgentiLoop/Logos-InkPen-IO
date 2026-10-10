@@ -12,7 +12,7 @@ extension DrawingCanvas {
         let boxTools: [DrawingTool] = [.rectangle, .square, .roundedRectangle, .pill, .circle, .ellipse, .oval]
         let radialTools: [DrawingTool] = [.polygon, .pentagon, .hexagon, .heptagon, .octagon, .nonagon, .star]
         // Egg and the triangles are box-style (top-left at the click); the line starts at the click.
-        let extraBoxTools: [DrawingTool] = [.egg, .isoscelesTriangle, .acuteTriangle, .rightTriangle, .equilateralTriangle]
+        let extraBoxTools: [DrawingTool] = [.egg, .cone, .isoscelesTriangle, .acuteTriangle, .rightTriangle, .equilateralTriangle]
         let isBox = boxTools.contains(tool) || extraBoxTools.contains(tool)
         let isLine = tool == .line
         guard isBox || isLine || radialTools.contains(tool) else { return }
@@ -86,6 +86,8 @@ extension DrawingCanvas {
             switch tool {
             case .egg:
                 path = createEggPath(rect: rect)
+            case .cone:
+                path = createConePath(rect: rect)
             case .isoscelesTriangle:
                 path = createIsoscelesTrianglePath(rect: rect)
             case .acuteTriangle:
