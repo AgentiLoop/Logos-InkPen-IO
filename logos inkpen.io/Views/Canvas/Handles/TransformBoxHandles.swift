@@ -470,8 +470,10 @@ struct TransformBoxHandles: View {
             }
         } else if isTopBottom {
             scaleY = axisScale(currentDistance.y, startDistance.y)
+            if isShiftPressed || NSEvent.modifierFlags.contains(.shift) { scaleX = scaleY }
         } else if isLeftRight {
             scaleX = axisScale(currentDistance.x, startDistance.x)
+            if isShiftPressed || NSEvent.modifierFlags.contains(.shift) { scaleY = scaleX }
         }
         let scaleTransform = CGAffineTransform.identity
             .translatedBy(x: anchor.x, y: anchor.y)
