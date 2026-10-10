@@ -1000,6 +1000,8 @@ extension DrawingCanvas {
         if isClosed && lastCurveIndex >= 0, case .close = shape.path.elements[lastCurveIndex] {
             lastCurveIndex -= 1
         }
+        let linkControl1Neighbor = isPointSmooth(handleID: control1HandleID)
+        let linkControl2Neighbor = isPointSmooth(handleID: control2HandleID)
         if let originalControl1 = originalHandlePositions[control1HandleID] {
             let newControl1Pos = CGPoint(
                 x: originalControl1.x + offset.x * control1Weight,
@@ -1016,7 +1018,7 @@ extension DrawingCanvas {
                     anchorA = CGPoint(x: toA.x, y: toA.y)
                 }
             }
-            if prevIndex >= 0, let anchor = anchorA {
+            if linkControl1Neighbor, prevIndex >= 0, let anchor = anchorA {
                 if case .curve = shape.path.elements[prevIndex] {
                     let prevControl2HandleID = HandleID(shapeID: curveSegment.shapeID, pathIndex: 0, elementIndex: prevIndex, handleType: .control2)
                     if let originalPrevControl2 = originalHandlePositions[prevControl2HandleID] {
@@ -1041,7 +1043,7 @@ extension DrawingCanvas {
                         visibleHandles.insert(lastControl2HandleID)
                     }
                 }
-            } else if isClosed && curveSegment.elementIndex == 1 {
+            } else if linkControl1Neighbor && isClosed && curveSegment.elementIndex == 1 {
                 let lastControl2HandleID = HandleID(shapeID: curveSegment.shapeID, pathIndex: 0, elementIndex: lastCurveIndex, handleType: .control2)
                 if let originalLastControl2 = originalHandlePositions[lastControl2HandleID] {
                     var anchorA: CGPoint?
@@ -1067,7 +1069,7 @@ extension DrawingCanvas {
             )
             liveHandlePositions[control2HandleID] = newControl2Pos
             let nextIndex = curveSegment.elementIndex + 1
-            if nextIndex < shape.path.elements.count, case .curve = shape.path.elements[nextIndex] {
+            if linkControl2Neighbor, nextIndex < shape.path.elements.count, case .curve = shape.path.elements[nextIndex] {
                 let nextControl1HandleID = HandleID(shapeID: curveSegment.shapeID, pathIndex: 0, elementIndex: nextIndex, handleType: .control1)
                 if let originalNextControl1 = originalHandlePositions[nextControl1HandleID] {
                     var anchorB: CGPoint?
@@ -1085,7 +1087,7 @@ extension DrawingCanvas {
                         handleCoincidentForLiveHandle(handleID: nextControl1HandleID, newPosition: linkedPos, shape: shape)
                     }
                 }
-            } else if isClosed && curveSegment.elementIndex == lastCurveIndex {
+            } else if linkControl2Neighbor && isClosed && curveSegment.elementIndex == lastCurveIndex {
                 let firstControl1HandleID = HandleID(shapeID: curveSegment.shapeID, pathIndex: 0, elementIndex: 1, handleType: .control1)
                 if let originalFirstControl1 = originalHandlePositions[firstControl1HandleID] {
                     var anchorB: CGPoint?
