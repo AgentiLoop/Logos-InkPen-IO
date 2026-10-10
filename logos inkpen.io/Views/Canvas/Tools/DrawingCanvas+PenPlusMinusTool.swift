@@ -199,11 +199,6 @@ extension DrawingCanvas {
             NSSound.beep()
             return
         }
-        let coincidentPoints = findCoincidentPoints(to: pointID, tolerance: coincidentPointTolerance)
-        if !coincidentPoints.isEmpty {
-            NSSound.beep()
-            return
-        }
         let oldPath = shape.path
         let pathPointCount = elements.filter { element in
             switch element {
