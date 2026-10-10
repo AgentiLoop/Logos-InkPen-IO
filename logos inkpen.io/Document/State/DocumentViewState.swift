@@ -33,6 +33,9 @@ class DocumentViewState: ObservableObject {
     /// Up/Down arrow while dragging a Polygon or Star adds/removes sides/points (Illustrator); the adjustment persists for the next shape.
     var radialCountAdjustment: [DrawingTool: Int] = [:]
 
+    /// Corner radius for the Rounded Rectangle tool; Up/Down arrow while dragging changes it, Left = square, Right = fully rounded (Illustrator). Persists for the next shape.
+    var roundedRectCornerRadius: Double = 20.0
+
     /// Inner radius of the star being dragged; Command-drag keeps it constant while the outer radius follows the cursor (Illustrator).
     var starDragInnerRadius: Double? = nil
 

@@ -216,7 +216,7 @@ extension DrawingCanvas {
                 )
             }
             let normalizedRect = rect.standardized
-            let cornerRadius: Double = 20.0
+            let cornerRadius: Double = document.viewState.roundedRectCornerRadius
             currentPath = createRoundedRectPath(rect: normalizedRect, cornerRadius: cornerRadius)
         case .pill:
             var dragDeltaX = currentLocation.x - startPoint.x
@@ -988,7 +988,7 @@ extension DrawingCanvas {
                 initialRadius = 0.0
                 cornerRadii = [0.0, 0.0, 0.0, 0.0]
             case .roundedRectangle:
-                initialRadius = 20.0
+                initialRadius = min(document.viewState.roundedRectCornerRadius, min(originalBounds.width, originalBounds.height) / 2)
                 cornerRadii = [initialRadius, initialRadius, initialRadius, initialRadius]
             case .pill:
                 let maxRadius = min(originalBounds.width, originalBounds.height) / 2

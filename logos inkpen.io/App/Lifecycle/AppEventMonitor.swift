@@ -131,6 +131,20 @@ final class AppEventMonitor {
         }
         if event.type == .keyDown,
            activeDoc.viewState.isShapeDrawingInProgress,
+           activeDoc.viewState.currentTool == .roundedRectangle,
+           [123, 124, 125, 126].contains(event.keyCode) {
+            // Illustrator: Up/Down arrow while dragging a rounded rectangle changes the corner radius; Left = square corners, Right = fully rounded.
+            let radius = activeDoc.viewState.roundedRectCornerRadius
+            switch event.keyCode {
+            case 126: activeDoc.viewState.roundedRectCornerRadius = min(5000, radius + 5)
+            case 125: activeDoc.viewState.roundedRectCornerRadius = max(0, radius - 5)
+            case 123: activeDoc.viewState.roundedRectCornerRadius = 0
+            default: activeDoc.viewState.roundedRectCornerRadius = 5000
+            }
+            return nil
+        }
+        if event.type == .keyDown,
+           activeDoc.viewState.isShapeDrawingInProgress,
            activeDoc.viewState.currentTool == .polygon || activeDoc.viewState.currentTool == .star,
            event.keyCode == 126 || event.keyCode == 125 {
             // Illustrator: Up/Down arrow while dragging a polygon or star adds/removes a side/point.

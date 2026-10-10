@@ -46,7 +46,7 @@ extension DrawingCanvas {
                    : tool == .equilateralTriangle ? [("Height:", 100)]
                    : [("Width:", 100), ("Height:", 100)])
                 : [("Radius:", 50)]
-        if tool == .roundedRectangle { rows.append(("Corner Radius:", 20)) }
+        if tool == .roundedRectangle { rows.append(("Corner Radius:", document.viewState.roundedRectCornerRadius)) }
         // The line's angle (row 1) is the only value that isn't a length.
         let isLength: (Int) -> Bool = { index in !(isLine && index == 1) }
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 236, height: CGFloat(rows.count) * 28))
@@ -122,7 +122,7 @@ extension DrawingCanvas {
                     .close
                 ], isClosed: true)
             case .roundedRectangle:
-                let requested = values.count > 2 ? values[2] : 20.0
+                let requested = values.count > 2 ? values[2] : document.viewState.roundedRectCornerRadius
                 path = createRoundedRectPath(rect: rect, cornerRadius: min(requested, min(width, height) / 2))
             case .pill:
                 path = createRoundedRectPath(rect: rect, cornerRadius: min(width, height) / 2)
