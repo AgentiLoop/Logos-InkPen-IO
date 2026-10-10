@@ -225,8 +225,12 @@ extension DrawingCanvas {
             document.dragSession.cachedSelectionBounds = nil
             document.dragSession.activeLayerIndex = nil
             layerPreviewOpacities.removeAll()
-            if NSEvent.modifierFlags.contains(.option) && !isBezierDrawing {
+            let isOptionCopy = NSEvent.modifierFlags.contains(.option) && !isBezierDrawing
+            if isOptionCopy {
                 ClipboardManager.shared.duplicateSelectionInPlace(in: document)
+            }
+            if !isBezierDrawing {
+                document.viewState.lastTransformAgain = (CGAffineTransform(translationX: finalDelta.x, y: finalDelta.y), isOptionCopy)
             }
             var oldShapes: [UUID: VectorShape] = [:]
             var affectedObjectIDs: Set<UUID> = []

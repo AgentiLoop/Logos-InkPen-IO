@@ -271,8 +271,8 @@ struct logos_inken_ioApp: App {
                     .disabled(documentState?.canUnflatten != true)
                     .help("Restore flattened group back to individual shapes with original colors")
                     Divider()
-                    Button("Duplicate") {
-                        documentState?.duplicate()
+                    Button("Transform Again") {
+                        documentState?.transformAgain()
                     }
                     .keyboardShortcut("d", modifiers: [.command])
                     .disabled(documentState?.hasSelection != true)

@@ -132,6 +132,7 @@ extension DrawingCanvas {
             .concatenating(matrix)
             .concatenating(CGAffineTransform(translationX: canvasPoint.x, y: canvasPoint.y))
 
+        document.viewState.lastTransformAgain = (transform, isCopy)
         if isCopy {
             ClipboardManager.shared.duplicateSelectionInPlace(in: document)
         }

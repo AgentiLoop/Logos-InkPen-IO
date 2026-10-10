@@ -945,6 +945,17 @@ class DocumentState: ObservableObject {
         return doc.viewState.orderedSelectedObjectIDs.count >= 2
     }
 
+    /// Illustrator's Transform Again: replays the last move / transform; with nothing recorded it duplicates the selection.
+    func transformAgain() {
+        guard let document = document else { return }
+        if document.viewState.lastTransformAgain != nil && !document.viewState.selectedObjectIDs.isEmpty {
+            NotificationCenter.default.post(name: .transformAgainRequested, object: document)
+            updateAllStates()
+        } else {
+            duplicate()
+        }
+    }
+
     func duplicate() {
         guard let document = document else { return }
         if !document.viewState.selectedObjectIDs.isEmpty {

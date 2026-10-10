@@ -485,6 +485,10 @@ extension DrawingCanvas {
                       let result = notification.userInfo?["handled"] as? PenRequestResult else { return }
                 result.handled = removeLastBezierAnchor()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .transformAgainRequested)) { notification in
+                guard (notification.object as? VectorDocument) === document else { return }
+                performTransformAgain()
+            }
             .onReceive(NotificationCenter.default.publisher(for: .exitIsolationRequested)) { notification in
                 guard (notification.object as? VectorDocument) === document else { return }
                 exitIsolation()

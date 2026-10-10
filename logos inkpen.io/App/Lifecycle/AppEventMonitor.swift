@@ -5,6 +5,8 @@ extension Notification.Name {
     /// Posted (object: VectorDocument) when Return/Enter/Esc should end the pen path in progress.
     static let penToolEndPathRequested = Notification.Name("penToolEndPathRequested")
     /// Posted (object: VectorDocument, userInfo["handled"]: PenRequestResult) when Delete/Backspace should remove the last pen anchor.
+    /// Posted (object: VectorDocument) when Transform Again (Cmd+D) should replay the last transform on the selection.
+    static let transformAgainRequested = Notification.Name("transformAgainRequested")
     static let penToolRemoveLastAnchorRequested = Notification.Name("penToolRemoveLastAnchorRequested")
 }
 

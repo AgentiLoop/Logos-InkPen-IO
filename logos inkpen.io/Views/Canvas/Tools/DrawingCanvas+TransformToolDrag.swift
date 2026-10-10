@@ -96,7 +96,9 @@ extension DrawingCanvas {
         transformToolSession = nil
         let transform = session.lastTransform
         guard !transform.isIdentity else { return }
-        if NSEvent.modifierFlags.contains(.option) {
+        let isCopy = NSEvent.modifierFlags.contains(.option)
+        document.viewState.lastTransformAgain = (transform, isCopy)
+        if isCopy {
             applyTransform(.identity, to: session)
             ClipboardManager.shared.duplicateSelectionInPlace(in: document)
             guard let copySession = makeTransformSession() else { return }
@@ -105,6 +107,18 @@ extension DrawingCanvas {
         } else {
             commitTransform(session)
         }
+    }
+
+    /// Illustrator's Transform Again (Cmd+D): replays the last transform (and its copy flag) on the current selection.
+    internal func performTransformAgain() {
+        guard let last = document.viewState.lastTransformAgain,
+              !document.viewState.selectedObjectIDs.isEmpty else { return }
+        if last.copy {
+            ClipboardManager.shared.duplicateSelectionInPlace(in: document)
+        }
+        guard let session = makeTransformSession() else { return }
+        applyTransform(last.transform, to: session)
+        commitTransform(session)
     }
 
     private func transformForDrag(session: TransformToolSession, start: CGPoint, current: CGPoint) -> CGAffineTransform {
