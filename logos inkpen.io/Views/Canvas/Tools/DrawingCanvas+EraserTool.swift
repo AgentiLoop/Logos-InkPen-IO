@@ -34,7 +34,7 @@ extension DrawingCanvas {
         eraserPreviewPath = VectorPath(elements: elements)
     }
 
-    /// Illustrator Eraser: drag over filled shapes to rub out the parts under the brush.
+    /// Illustrator Eraser: drag over shapes to rub out the parts under the brush (filled areas, or the line of stroke-only paths).
     /// With a selection only the selected shapes are erased; with nothing selected every shape the stroke touches is.
     /// Pieces cut apart by the eraser become separate shapes; a shape that is erased completely is deleted.
     internal func handleEraserDragEnd() {
@@ -62,7 +62,7 @@ extension DrawingCanvas {
             guard case .shape(let shape) = object.objectType,
                   selected.isEmpty || selected.contains(shape.id),
                   shape.isVisible, !shape.isLocked,
-                  shape.fillStyle != nil,
+                  shape.fillStyle != nil || shape.strokeStyle != nil,
                   !shape.isGroup, !shape.isGroupContainer, !shape.isCompoundPath,
                   !shape.isClippingPath, !shape.isWarpObject, shape.textContent == nil,
                   shape.name != "Canvas Background", shape.name != "Pasteboard Background",
@@ -80,6 +80,32 @@ extension DrawingCanvas {
             }
             let cgPath = shape.path.cgPath
             guard cgPath.boundingBoxOfPath.intersects(localBounds) else { continue }
+            if shape.fillStyle == nil {
+                // Stroke-only (open or closed outline): cut the centre line where the eraser passes.
+                let lineHits = cgPath.lineIntersection(localRegion, using: .winding)
+                guard !lineHits.isEmpty else { continue }
+                let pieces = ProfessionalPathOperations.extractSubpaths(from: cgPath.lineSubtracting(localRegion, using: .winding))
+                    .filter { hypot($0.boundingBoxOfPath.width, $0.boundingBoxOfPath.height) > 0.01 }
+                if pieces.isEmpty {
+                    steps.append(DeleteObjectCommand(objectIDs: [shape.id], document: document))
+                    deletedIDs.append(shape.id)
+                    continue
+                }
+                var firstPath = VectorPath(cgPath: pieces[0], fillRule: shape.path.fillRule.cgPathFillRule)
+                firstPath.id = shape.path.id
+                var added: [VectorObject] = []
+                for piece in pieces.dropFirst() {
+                    var copy = shape
+                    copy.id = UUID()
+                    copy.path = VectorPath(cgPath: piece, fillRule: shape.path.fillRule.cgPathFillRule)
+                    copy.updateBounds()
+                    added.append(VectorObject(shape: copy, layerIndex: object.layerIndex))
+                }
+                steps.append(SplitPathCommand(objectID: shape.id, oldPath: shape.path, newPath: firstPath, addedObjects: added))
+                resultIDs.append(shape.id)
+                resultIDs.append(contentsOf: added.map { $0.id })
+                continue
+            }
             let rule = shape.path.fillRule.cgPathFillRule
             guard !cgPath.intersection(localRegion, using: rule).isEmpty else { continue }
             let remaining = cgPath.subtracting(localRegion, using: rule)
