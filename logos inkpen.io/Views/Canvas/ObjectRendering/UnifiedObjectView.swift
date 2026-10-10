@@ -71,8 +71,23 @@ struct LayerCanvasView: View {
     let liveCornerRadii: [Double]
     let selectedShapeIDForCornerRadius: UUID?
     let layerUpdateTrigger: UInt?
+    var isolatedGroupID: UUID? = nil
 
     var appState = AppState.shared
+
+    /// Illustrator isolation mode dims everything except the isolated group (and its ancestors).
+    private func isDimmedByIsolation(_ object: VectorObject) -> Bool {
+        guard let isolatedID = isolatedGroupID, object.id != isolatedID else { return false }
+        func contains(_ shape: VectorShape, depth: Int) -> Bool {
+            guard depth < 16 else { return false }
+            for memberID in shape.memberIDs {
+                if memberID == isolatedID { return true }
+                if let member = document.snapshot.objects[memberID], contains(member.shape, depth: depth + 1) { return true }
+            }
+            return false
+        }
+        return !contains(object.shape, depth: 0)
+    }
 
     private func viewportRect(canvasSize: CGSize) -> CGRect {
         let offsetVec = SIMD2<Float>(Float(canvasOffset.x), Float(canvasOffset.y))
@@ -210,6 +225,7 @@ struct LayerCanvasView: View {
             for object in visibleObjects {
                 if case .guide = object.objectType { continue }
                 let isSelected = selectedObjectIDs.contains(object.id)
+                context.opacity = isDimmedByIsolation(object) ? 0.3 : 1.0
                 let isTextObject = if case .text = object.objectType { true } else { false }
                 let hasLiveOffset = dragPreviewDelta != .zero || liveNudgeOffset != .zero
                 if isSelected && hasLiveOffset {
@@ -1259,6 +1275,7 @@ struct IsolatedLayerView: View {
     let selectedShapeIDForCornerRadius: UUID?
     let layerUpdateTrigger: UInt
     let isPanning: Bool
+    var isolatedGroupID: UUID? = nil
 
     private var editingTextShapes: [(id: UUID, dragDelta: CGPoint)] {
         guard document.viewState.currentTool == .font else {
@@ -1330,7 +1347,8 @@ struct IsolatedLayerView: View {
                 imageInterpolationQuality: imageInterpolationQuality,
                 liveCornerRadii: liveCornerRadii,
                 selectedShapeIDForCornerRadius: selectedShapeIDForCornerRadius,
-                layerUpdateTrigger: layerUpdateTrigger
+                layerUpdateTrigger: layerUpdateTrigger,
+                isolatedGroupID: isolatedGroupID
             )
             ForEach(editingTextShapes, id: \.id) { textInfo in
                 ProfessionalTextCanvas(

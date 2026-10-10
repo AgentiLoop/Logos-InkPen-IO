@@ -335,7 +335,8 @@ extension DrawingCanvas {
                 liveCornerRadii: liveCornerRadii,
                 selectedShapeIDForCornerRadius: selectedShapeInThisLayer,
                 layerUpdateTrigger: document.viewState.layerUpdateTriggers[layer.id] ?? 0,
-                isPanning: isPanGestureActive
+                isPanning: isPanGestureActive,
+                isolatedGroupID: isolatedGroupDisplayID
             )
             .id(document.viewState.layerUpdateTriggers[layer.id] ?? 0)
         }
