@@ -95,6 +95,8 @@ struct DrawingCanvas: View {
     @State internal var shapeBuilderTouched: [Int] = []
     @State internal var shapeBuilderLastPoint: CGPoint? = nil
     @State internal var shapeBuilderAborted = false
+    @State internal var shapeBuilderHoverIndex: Int? = nil
+    @State internal var shapeBuilderHoverSelection: Set<UUID>? = nil
     @State internal var curvatureNodes: [CurvatureNode] = []
     @State internal var curvatureShapeID: UUID? = nil
     @State internal var curvatureDragIndex: Int? = nil

@@ -12,7 +12,7 @@ extension DrawingCanvas {
     // MARK: - Session
 
     /// Divides the selected closed, filled shapes into their overlap regions. Returns false (and beeps) if fewer than two qualify.
-    private func prepareShapeBuilderSession() -> Bool {
+    private func prepareShapeBuilderSession(beepOnFailure: Bool = true) -> Bool {
         var sources: [VectorShape] = []
         var layer: Int?
         for shape in document.getSelectedShapesInStackingOrder() {
@@ -29,7 +29,7 @@ extension DrawingCanvas {
         guard let layerIndex = layer, layerIndex >= 0, layerIndex < document.snapshot.layers.count,
               !document.snapshot.layers[layerIndex].isLocked,
               sources.count >= 2 else {
-            NSSound.beep()
+            if beepOnFailure { NSSound.beep() }
             return false
         }
         let paths: [CGPath] = sources.map { shape in
@@ -41,7 +41,7 @@ extension DrawingCanvas {
             piece.1 < sources.count ? ShapeBuilderRegion(path: piece.0, owner: piece.1) : nil
         }
         guard !regions.isEmpty else {
-            NSSound.beep()
+            if beepOnFailure { NSSound.beep() }
             return false
         }
         shapeBuilderSources = sources
@@ -99,7 +99,25 @@ extension DrawingCanvas {
         commitShapeBuilderSession(deleting: NSEvent.modifierFlags.contains(.option))
     }
 
+    /// Illustrator highlights the region under the cursor before the drag starts.
+    internal func updateShapeBuilderHover(at location: CGPoint?) {
+        guard let location, shapeBuilderLastPoint == nil else {
+            shapeBuilderHoverIndex = nil
+            return
+        }
+        let selection = document.viewState.selectedObjectIDs
+        if shapeBuilderHoverSelection != selection {
+            resetShapeBuilderSession()
+            _ = prepareShapeBuilderSession(beepOnFailure: false)
+            shapeBuilderHoverSelection = selection
+        }
+        let index = shapeBuilderRegionIndex(at: location)
+        if index != shapeBuilderHoverIndex { shapeBuilderHoverIndex = index }
+    }
+
     internal func resetShapeBuilderSession() {
+        shapeBuilderHoverIndex = nil
+        shapeBuilderHoverSelection = nil
         shapeBuilderRegions = []
         shapeBuilderSources = []
         shapeBuilderTouched = []
@@ -167,12 +185,14 @@ extension DrawingCanvas {
     /// Highlights the regions the Shape Builder drag has touched so far.
     @ViewBuilder
     internal func shapeBuilderOverlay(geometry: GeometryProxy) -> some View {
-        if document.viewState.currentTool == .shapeBuilder, !shapeBuilderTouched.isEmpty {
+        if document.viewState.currentTool == .shapeBuilder,
+           !shapeBuilderTouched.isEmpty || shapeBuilderHoverIndex != nil {
             let deleting = NSEvent.modifierFlags.contains(.option)
+            let highlighted = shapeBuilderTouched.isEmpty ? [shapeBuilderHoverIndex ?? 0] : shapeBuilderTouched
             Canvas { context, _ in
                 context.translateBy(x: canvasOffset.x, y: canvasOffset.y)
                 context.scaleBy(x: zoomLevel, y: zoomLevel)
-                for index in shapeBuilderTouched where index < shapeBuilderRegions.count {
+                for index in highlighted where index < shapeBuilderRegions.count {
                     let path = Path(shapeBuilderRegions[index].path)
                     context.fill(path, with: .color((deleting ? Color.red : Color.blue).opacity(0.35)))
                     context.stroke(path, with: .color(deleting ? Color.red : Color.blue),

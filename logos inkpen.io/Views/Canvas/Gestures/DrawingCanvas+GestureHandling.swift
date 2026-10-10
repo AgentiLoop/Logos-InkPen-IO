@@ -7,6 +7,11 @@ extension DrawingCanvas {
         if case .active(let location) = phase {
             currentMouseLocation = location
             currentMousePosition = location
+            if document.viewState.currentTool == .shapeBuilder {
+                updateShapeBuilderHover(at: screenToCanvas(location, geometry: geometry))
+            } else if shapeBuilderHoverSelection != nil {
+                resetShapeBuilderSession()
+            }
             #if os(macOS)
             if isTextEditingMode {
                 NSCursor.iBeam.set()
@@ -59,6 +64,7 @@ extension DrawingCanvas {
         } else {
             currentMouseLocation = nil
             showClosePathHint = false
+            if shapeBuilderLastPoint == nil { shapeBuilderHoverIndex = nil }
             #if os(macOS)
             if !isCanvasHovering {
                 NSCursor.arrow.set()
