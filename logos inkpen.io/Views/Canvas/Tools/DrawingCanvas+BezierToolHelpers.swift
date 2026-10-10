@@ -228,6 +228,9 @@ extension DrawingCanvas {
     }
 
     internal func finishBezierPenDrag() {
+        // Illustrator: click-dragging on the start anchor closes the path and pulls out its handles.
+        let dragClosesPath = isBezierDrawing && bezierPoints.count >= 3 && isDraggingBezierPoint
+            && liveBezierHandles.count == 1 && liveBezierHandles[0] != nil
         for (index, liveHandle) in liveBezierHandles {
             bezierHandles[index] = liveHandle
         }
@@ -237,6 +240,9 @@ extension DrawingCanvas {
         isDraggingBezierPoint = false
         updatePathWithHandles()
         updateActiveBezierShapeInDocument()
+        if dragClosesPath {
+            closeBezierPath()
+        }
     }
 
     internal func shouldShowContinuePathHint() -> (Bool, CGPoint?) {
