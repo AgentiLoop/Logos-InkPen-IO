@@ -66,6 +66,8 @@ extension DrawingCanvas {
             handleConvertAnchorPointTap(at: canvasLocation)
         case .penPlusMinus:
             handlePenPlusMinusTap(at: canvasLocation)
+        case .scissors:
+            handleScissorsTap(at: canvasLocation)
         case .bezierPen:
             handleBezierPenTap(at: canvasLocation)
         case .font:

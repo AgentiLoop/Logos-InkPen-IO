@@ -364,6 +364,8 @@ struct VerticalToolbar: View {
             return "Gradient Tool (G) - Edit gradient origin and focal points"
         case .cornerRadius:
             return "Corner Radius Tool (⌥R) - Edit corner radius of rectangles"
+        case .scissors:
+            return "Scissors Tool (C) - Click an anchor or segment to cut the path"
         }
     }
 }

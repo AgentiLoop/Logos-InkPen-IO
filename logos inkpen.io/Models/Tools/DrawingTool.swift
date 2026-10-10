@@ -42,6 +42,7 @@ enum DrawingTool: String, CaseIterable, Codable {
     case zoom = "Zoom"
     case gradient = "Gradient"
     case cornerRadius = "Corner Radius"
+    case scissors = "Scissors"
 
     var iconName: String {
         switch self {
@@ -86,6 +87,7 @@ enum DrawingTool: String, CaseIterable, Codable {
         case .zoom: return "magnifyingglass"
         case .gradient: return "circle.lefthalf.striped.horizontal"
         case .cornerRadius: return "rectangle.roundedtop"
+        case .scissors: return "scissors"
         }
     }
 }

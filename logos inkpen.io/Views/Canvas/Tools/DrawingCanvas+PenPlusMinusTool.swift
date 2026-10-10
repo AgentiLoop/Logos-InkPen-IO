@@ -224,7 +224,7 @@ extension DrawingCanvas {
         }
     }
 
-    private func findAnchorPointAt(location: CGPoint, tolerance: Double, restrictedTo: Set<UUID>? = nil) -> PointID? {
+    func findAnchorPointAt(location: CGPoint, tolerance: Double, restrictedTo: Set<UUID>? = nil) -> PointID? {
         for newVectorObject in document.snapshot.objects.values.reversed() {
             if case .shape(let shape) = newVectorObject.objectType {
                 if !shape.isVisible || shape.isLocked { continue }
@@ -246,7 +246,7 @@ extension DrawingCanvas {
         return nil
     }
 
-    private func findSegmentAt(location: CGPoint, tolerance: Double, restrictedTo: Set<UUID>? = nil) -> (shapeID: UUID, elementIndex: Int)? {
+    func findSegmentAt(location: CGPoint, tolerance: Double, restrictedTo: Set<UUID>? = nil) -> (shapeID: UUID, elementIndex: Int)? {
         for object in document.snapshot.objects.values.reversed() {
             if case .shape(let shape) = object.objectType {
                 if !shape.isVisible || shape.isLocked { continue }

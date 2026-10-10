@@ -721,6 +721,11 @@ struct logos_inken_ioApp: App {
                     }
                     .keyboardShortcut(.upArrow, modifiers: [.control])
                     .help("Switch to corner radius tool")
+                    Button("Scissors Tool") {
+                        documentState?.switchToTool(.scissors)
+                    }
+                    .keyboardShortcut("c", modifiers: [])
+                    .help("Switch to scissors tool")
                 }
                 CommandMenu("Debug") {
                     Button(action: {
