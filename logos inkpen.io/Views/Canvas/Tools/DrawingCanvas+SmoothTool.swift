@@ -29,20 +29,41 @@ extension DrawingCanvas {
         var steps: [BaseCommand] = []
         for id in document.viewState.orderedSelectedObjectIDs {
             guard let shape = document.findShape(by: id),
-                  !shape.isGroup, !shape.isGroupContainer, !shape.isCompoundPath, shape.isVisible, !shape.isLocked,
+                  !shape.isGroup, !shape.isGroupContainer, shape.isVisible, !shape.isLocked,
                   shape.textContent == nil, shape.embeddedImageData == nil,
                   shape.transform == .identity,
                   shape.path.pendingStartHandle == nil, shape.path.pendingEndHandle == nil,
                   shape.path.bezierHandles?.isEmpty ?? true,
-                  let original = reshapeSegments(from: shape.path.elements),
-                  !original.segments.isEmpty,
-                  let newElements = smoothedElements(for: original.segments, closed: original.closed, trail: trail, radius: radius) else { continue }
+                  let newElements = smoothedSubpathElements(shape.path.elements, trail: trail, radius: radius) else { continue }
             var smoothed = shape.path
             smoothed.elements = newElements
             steps.append(ModifyPathCommand(objectID: id, oldPath: shape.path, newPath: smoothed))
         }
         guard !steps.isEmpty else { return }
         document.commandManager.execute(EraserCommand(steps: steps))
+    }
+
+    /// Smooths every subpath the trail passed over (compound paths keep their other subpaths untouched).
+    private func smoothedSubpathElements(_ elements: [PathElement], trail: [CGPoint], radius: Double) -> [PathElement]? {
+        var starts: [Int] = []
+        for (index, element) in elements.enumerated() {
+            if case .move = element { starts.append(index) }
+        }
+        guard !starts.isEmpty, starts[0] == 0 else { return nil }
+        var result: [PathElement] = []
+        var changed = false
+        for (position, lower) in starts.enumerated() {
+            let upper = position + 1 < starts.count ? starts[position + 1] : elements.count
+            let part = Array(elements[lower..<upper])
+            if let original = reshapeSegments(from: part), !original.segments.isEmpty,
+               let smoothed = smoothedElements(for: original.segments, closed: original.closed, trail: trail, radius: radius) {
+                result += smoothed
+                changed = true
+            } else {
+                result += part
+            }
+        }
+        return changed ? result : nil
     }
 
     private func smoothedElements(for segments: [ReshapeSegment], closed: Bool, trail: [CGPoint], radius: Double) -> [PathElement]? {
