@@ -72,10 +72,11 @@ extension DrawingCanvas {
         }
     }
 
+    /// Compound paths hit-test through their real outline and fill rule (holes stay unselectable), like any plain path.
     private func lassoTouches(object: VectorObject, shape: VectorShape, loop: CGPath, loopBounds: CGRect) -> Bool {
         guard marqueeTouches(object: object, shape: shape, rect: loopBounds) else { return false }
         let isPlainPath = !shape.isGroupContainer && !shape.isWarpObject && !shape.isClippingGroup &&
-            !shape.isCompoundPath && shape.embeddedImageData == nil && shape.linkedImagePath == nil &&
+            shape.embeddedImageData == nil && shape.linkedImagePath == nil &&
             shape.textContent == nil && !shape.path.elements.isEmpty
         if !isPlainPath {
             if case .text = object.objectType { return true }
