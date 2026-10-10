@@ -356,14 +356,15 @@ struct TransformBoxHandles: View {
         )
     }
 
-    /// Option held while dragging a handle inverts the anchor (Illustrator): with a custom anchor it scales about
-    /// the centre; with the default centre anchor it scales about the opposite handle.
+    /// Illustrator: dragging a handle scales about the opposite handle; Option scales about the centre.
+    /// An anchor explicitly picked in the transform origin selector is honoured (Option then uses the centre).
     private func scalingAnchor(forHandle index: Int, in rect: CGRect) -> CGPoint {
-        guard NSEvent.modifierFlags.contains(.option), index < 8 else { return getTransformAnchor(in: rect) }
+        guard index < 8 else { return getTransformAnchor(in: rect) }
+        let optionHeld = NSEvent.modifierFlags.contains(.option)
         if transformOrigin == .center {
-            return handlePosition(index: (index + 4) % 8, in: rect)
+            return optionHeld ? CGPoint(x: rect.midX, y: rect.midY) : handlePosition(index: (index + 4) % 8, in: rect)
         }
-        return CGPoint(x: rect.midX, y: rect.midY)
+        return optionHeld ? CGPoint(x: rect.midX, y: rect.midY) : getTransformAnchor(in: rect)
     }
 
     private func toggleShapeLock() {
