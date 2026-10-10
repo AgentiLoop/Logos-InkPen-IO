@@ -9,7 +9,7 @@ struct ToolGroupConfiguration {
         "circles": [.ellipse, .oval, .circle, .egg],
         "triangles": [.equilateralTriangle, .rightTriangle, .acuteTriangle, .cone],
         "polygons": [.pentagon, .hexagon, .heptagon, .octagon, .nonagon],
-        "lines": [.bezierPen, .line],
+        "lines": [.bezierPen, .curvature, .line],
         "brushes": [.brush, .marker, .freehand, .smooth],
         "transforms": [.scale, .rotate, .reflect, .shear, .warp],
         "stars": [.star],

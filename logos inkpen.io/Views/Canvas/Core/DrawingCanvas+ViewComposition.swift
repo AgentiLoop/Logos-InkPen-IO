@@ -53,6 +53,7 @@ extension DrawingCanvas {
             }
         }
         rubberBandPreview(geometry: geometry)
+        curvatureOverlay(geometry: geometry)
         if let preview = brushPreviewPath {
             Canvas { context, size in
                 context.translateBy(x: canvasOffset.x, y: canvasOffset.y)
@@ -488,16 +489,23 @@ extension DrawingCanvas {
             }
             .onReceive(NotificationCenter.default.publisher(for: .penToolEndPathRequested)) { notification in
                 // Return / Esc end the in-progress pen path (Illustrator convention).
-                guard (notification.object as? VectorDocument) === document,
-                      document.viewState.currentTool == .bezierPen,
-                      isBezierDrawing else { return }
+                guard (notification.object as? VectorDocument) === document else { return }
+                if document.viewState.currentTool == .curvature {
+                    finishCurvaturePath()
+                    return
+                }
+                guard document.viewState.currentTool == .bezierPen, isBezierDrawing else { return }
                 finishBezierPath()
             }
             .onReceive(NotificationCenter.default.publisher(for: .penToolRemoveLastAnchorRequested)) { notification in
                 guard (notification.object as? VectorDocument) === document,
-                      document.viewState.currentTool == .bezierPen,
-                      isBezierDrawing, !isDraggingBezierHandle,
                       let result = notification.userInfo?["handled"] as? PenRequestResult else { return }
+                if document.viewState.currentTool == .curvature {
+                    result.handled = removeLastCurvatureNode()
+                    return
+                }
+                guard document.viewState.currentTool == .bezierPen,
+                      isBezierDrawing, !isDraggingBezierHandle else { return }
                 result.handled = removeLastBezierAnchor()
             }
             .onReceive(NotificationCenter.default.publisher(for: .transformAgainRequested)) { notification in

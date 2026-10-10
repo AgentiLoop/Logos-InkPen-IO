@@ -92,14 +92,14 @@ final class AppEventMonitor {
             return event
         }
         if event.type == .keyDown,
-           activeDoc.viewState.currentTool == .bezierPen,
+           [DrawingTool.bezierPen, .curvature].contains(activeDoc.viewState.currentTool),
            [Self.returnKeyCode, Self.keypadEnterKeyCode, Self.escapeKeyCode].contains(event.keyCode),
            event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {
             NotificationCenter.default.post(name: .penToolEndPathRequested, object: activeDoc)
             return nil
         }
         if event.type == .keyDown,
-           activeDoc.viewState.currentTool == .bezierPen,
+           [DrawingTool.bezierPen, .curvature].contains(activeDoc.viewState.currentTool),
            event.keyCode == 51 || event.keyCode == 117,
            event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty {
             // Illustrator: Delete/Backspace while drawing removes the last anchor placed.

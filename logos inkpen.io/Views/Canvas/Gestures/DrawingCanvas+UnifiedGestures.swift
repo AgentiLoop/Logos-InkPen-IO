@@ -12,6 +12,10 @@ extension DrawingCanvas {
         case .zoom:
             actualSize(geometry: geometry)
             return
+        case .curvature:
+            if handleCurvatureDoubleClick(at: canvasLocation) { return }
+            handleCurvatureTap(at: canvasLocation)
+            return
         default:
             break
         }
@@ -70,6 +74,8 @@ extension DrawingCanvas {
             handleScissorsTap(at: canvasLocation)
         case .bezierPen:
             handleBezierPenTap(at: canvasLocation)
+        case .curvature:
+            handleCurvatureTap(at: canvasLocation)
         case .font:
             if !isShiftPressed && !isCommandPressed {
                 if let existingTextID = findTextAt(location: canvasLocation) {
@@ -174,6 +180,8 @@ extension DrawingCanvas {
                 handleLassoDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
             }
             handleLassoDragUpdate(at: screenToCanvas(value.location, geometry: geometry))
+        case .curvature:
+            handleCurvatureDrag(value: value, geometry: geometry)
         case .smooth:
             if smoothPoints.isEmpty {
                 handleSmoothDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
@@ -262,6 +270,8 @@ extension DrawingCanvas {
             handleKnifeDragEnd()
         case .lasso:
             handleLassoDragEnd()
+        case .curvature:
+            handleCurvatureDragEnd()
         case .smooth:
             handleSmoothDragEnd()
         case .eraser:

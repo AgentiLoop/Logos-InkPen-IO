@@ -23,6 +23,9 @@ extension DrawingCanvas {
         if previousTool == .bezierPen && newTool != .bezierPen && !isTemporaryTool && isBezierDrawing {
             finishBezierPath()
         }
+        if previousTool == .curvature && newTool != .curvature && !isTemporaryTool && curvatureShapeID != nil {
+            finishCurvaturePath()
+        }
         if previousTool == .freehand && newTool != .freehand && !isTemporaryTool && isFreehandDrawing {
             handleFreehandDragEnd()
         }

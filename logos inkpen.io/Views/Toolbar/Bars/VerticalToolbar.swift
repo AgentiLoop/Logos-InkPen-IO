@@ -370,6 +370,8 @@ struct VerticalToolbar: View {
             return "Knife Tool - Drag across filled shapes to slice them into pieces"
         case .lasso:
             return "Lasso Tool (Q) - Drag a freehand loop to select objects (Shift adds, Option removes)"
+        case .curvature:
+            return "Curvature Tool (Shift+`) - Click to place points; the path curves smoothly through them. Double-click a point to toggle smooth/corner; Return or Esc ends the path"
         case .smooth:
             return "Smooth Tool - Select a path, then drag along it to smooth out bumps and remove extra anchor points"
         case .eraser:

@@ -577,6 +577,11 @@ struct logos_inken_ioApp: App {
                     }
                     .keyboardShortcut("p", modifiers: [])
                     .help("Switch to bezier pen tool")
+                    Button("Curvature Tool") {
+                        documentState?.switchToTool(.curvature)
+                    }
+                    .keyboardShortcut("`", modifiers: [.shift])
+                    .help("Switch to curvature tool")
                     Button("Freehand Tool") {
                         documentState?.switchToTool(.freehand)
                     }
