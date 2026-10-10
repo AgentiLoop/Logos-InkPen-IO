@@ -110,8 +110,12 @@ extension DrawingCanvas {
                 let snappedAngle = (atan2(dy, dx) / (.pi / 4)).rounded() * (.pi / 4)
                 lineEnd = CGPoint(x: startPoint.x + length * cos(snappedAngle), y: startPoint.y + length * sin(snappedAngle))
             }
+            var lineStart = startPoint
+            if isOptionPressed || NSEvent.modifierFlags.contains(.option) {
+                lineStart = CGPoint(x: 2 * startPoint.x - lineEnd.x, y: 2 * startPoint.y - lineEnd.y)
+            }
             currentPath = VectorPath(elements: [
-                .move(to: VectorPoint(startPoint)),
+                .move(to: VectorPoint(lineStart)),
                 .line(to: VectorPoint(lineEnd))
             ])
         case .rectangle:
