@@ -356,6 +356,16 @@ struct TransformBoxHandles: View {
         )
     }
 
+    /// Option held while dragging a handle inverts the anchor (Illustrator): with a custom anchor it scales about
+    /// the centre; with the default centre anchor it scales about the opposite handle.
+    private func scalingAnchor(forHandle index: Int, in rect: CGRect) -> CGPoint {
+        guard NSEvent.modifierFlags.contains(.option), index < 8 else { return getTransformAnchor(in: rect) }
+        if transformOrigin == .center {
+            return handlePosition(index: (index + 4) % 8, in: rect)
+        }
+        return CGPoint(x: rect.midX, y: rect.midY)
+    }
+
     private func toggleShapeLock() {
         guard let objectID = document.viewState.selectedObjectIDs.first else { return }
         document.updateShapeByID(objectID, silent: false) { shape in
@@ -425,7 +435,7 @@ struct TransformBoxHandles: View {
             }
             return
         }
-        let anchor = getTransformAnchor(in: bounds)
+        let anchor = scalingAnchor(forHandle: index, in: bounds)
         let anchorScreenX = anchor.x * zoomLevel + canvasOffset.x
         let anchorScreenY = anchor.y * zoomLevel + canvasOffset.y
         let startDistance = CGPoint(
