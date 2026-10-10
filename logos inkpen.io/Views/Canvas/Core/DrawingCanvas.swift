@@ -101,6 +101,8 @@ struct DrawingCanvas: View {
     @State internal var curvatureDragEvaluated = false
     @State internal var smoothPoints: [CGPoint] = []
     @State internal var smoothPreviewPath: VectorPath? = nil
+    @State internal var blobBrushPoints: [CGPoint] = []
+    @State internal var blobBrushPreviewPath: VectorPath? = nil
     @State internal var eraserPoints: [CGPoint] = []
     @State internal var eraserPreviewPath: VectorPath? = nil
     @State internal var brushPath: VectorPath?

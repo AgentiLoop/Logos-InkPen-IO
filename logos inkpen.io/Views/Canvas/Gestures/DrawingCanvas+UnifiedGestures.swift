@@ -194,6 +194,11 @@ extension DrawingCanvas {
                 handleSmoothDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
             }
             handleSmoothDragUpdate(at: screenToCanvas(value.location, geometry: geometry))
+        case .blobBrush:
+            if blobBrushPoints.isEmpty {
+                handleBlobBrushDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
+            }
+            handleBlobBrushDragUpdate(at: screenToCanvas(value.location, geometry: geometry))
         case .eraser:
             if eraserPoints.isEmpty {
                 handleEraserDragUpdate(at: screenToCanvas(value.startLocation, geometry: geometry))
@@ -283,6 +288,8 @@ extension DrawingCanvas {
             handleShapeBuilderDragEnd()
         case .smooth:
             handleSmoothDragEnd()
+        case .blobBrush:
+            handleBlobBrushDragEnd()
         case .eraser:
             handleEraserDragEnd()
         case .brush:

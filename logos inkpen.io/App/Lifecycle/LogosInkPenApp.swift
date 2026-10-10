@@ -592,6 +592,11 @@ struct logos_inken_ioApp: App {
                     }
                     .keyboardShortcut("b", modifiers: [])
                     .help("Switch to brush tool")
+                    Button("Blob Brush Tool") {
+                        documentState?.switchToTool(.blobBrush)
+                    }
+                    .keyboardShortcut("b", modifiers: [.option])
+                    .help("Switch to blob brush tool")
                     Button("Marker Tool") {
                         documentState?.switchToTool(.marker)
                     }

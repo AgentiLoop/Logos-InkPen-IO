@@ -49,6 +49,7 @@ enum DrawingTool: String, CaseIterable, Codable {
     case smooth = "Smooth"
     case curvature = "Curvature"
     case shapeBuilder = "Shape Builder"
+    case blobBrush = "Blob Brush"
 
     var iconName: String {
         switch self {
@@ -100,6 +101,7 @@ enum DrawingTool: String, CaseIterable, Codable {
         case .smooth: return "scribble.variable"
         case .curvature: return "point.topleft.down.to.point.bottomright.curvepath"
         case .shapeBuilder: return "square.on.square.intersection.dashed"
+        case .blobBrush: return "paintbrush.pointed.fill"
         }
     }
 }

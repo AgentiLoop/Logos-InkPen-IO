@@ -374,6 +374,8 @@ struct VerticalToolbar: View {
             return "Curvature Tool (Shift+`) - Click to place points; the path curves smoothly through them. Double-click a point to toggle smooth/corner; Return or Esc ends the path"
         case .shapeBuilder:
             return "Shape Builder Tool (Shift+M) - Select overlapping shapes, then drag across regions to merge them (Option-drag deletes, click separates a region)"
+        case .blobBrush:
+            return "Blob Brush Tool (⌥B) - Paint filled shapes with the stroke colour; strokes touching a shape of the same fill merge into it ([ and ] change the size)"
         case .smooth:
             return "Smooth Tool - Select a path, then drag along it to smooth out bumps and remove extra anchor points"
         case .eraser:

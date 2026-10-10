@@ -108,12 +108,18 @@ final class AppEventMonitor {
             if result.handled { return nil }
         }
         if event.type == .keyDown,
-           activeDoc.viewState.currentTool == .eraser,
+           activeDoc.viewState.currentTool == .eraser || activeDoc.viewState.currentTool == .blobBrush,
            let bracket = event.charactersIgnoringModifiers, bracket == "[" || bracket == "]",
            event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
             let settings = ApplicationSettings.shared
-            let step = settings.eraserSize >= 20 ? 5.0 : (settings.eraserSize >= 5 ? 1.0 : 0.5)
-            settings.eraserSize = bracket == "]" ? min(500, settings.eraserSize + step) : max(1, settings.eraserSize - step)
+            if activeDoc.viewState.currentTool == .blobBrush {
+                let size = settings.blobBrushSize
+                let step = size >= 20 ? 5.0 : (size >= 5 ? 1.0 : 0.5)
+                settings.blobBrushSize = bracket == "]" ? min(500, size + step) : max(1, size - step)
+            } else {
+                let step = settings.eraserSize >= 20 ? 5.0 : (settings.eraserSize >= 5 ? 1.0 : 0.5)
+                settings.eraserSize = bracket == "]" ? min(500, settings.eraserSize + step) : max(1, settings.eraserSize - step)
+            }
             return nil
         }
         if event.type == .keyDown,
