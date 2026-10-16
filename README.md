@@ -1,5 +1,8 @@
 # logos inkpen.io
 
+🤖 **Built by the makers of [Agent!](https://github.com/AgentiLoop/Agent)**, an autonomous macOS agent.
+
+
 <a href="https://www.paypal.com/ncp/payment/3DTH3S7XARK98"><img src="https://img.shields.io/badge/Tip_Jar-PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Tip Jar" /></a>
 
 Native FreeHand import (FH3 through FH11 & MX) — opened directly, no intermediate formats. Improved PDF & SVG parsing for Xcode UI, SpriteKit, web graphics, and Linux icons. Apple Pencil support via Luna Display or Sidecar. Built on SwiftUI, Metal & CoreGraphics for macOS 14, 15 & 26. GPU-accelerated vector rendering with real-time previews and instant zoom at any scale.
