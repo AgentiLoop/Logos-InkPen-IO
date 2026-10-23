@@ -91,210 +91,32 @@ extension VectorDocument {
     }
 
     func setActiveColor(_ color: VectorColor) {
-        let shouldSaveUndo = !viewState.selectedObjectIDs.isEmpty
-
-        var oldColors: [UUID: VectorColor] = [:]
-        var newColors: [UUID: VectorColor] = [:]
-        var oldOpacities: [UUID: Double] = [:]
-        var newOpacities: [UUID: Double] = [:]
-        for objectID in viewState.selectedObjectIDs {
-            if let vectorObject = snapshot.objects[ objectID] {
-                switch vectorObject.objectType {
-                case .text(let shape):
-                    switch viewState.activeColorTarget {
-                    case .fill:
-                        oldColors[objectID] = shape.typography?.fillColor ?? .black
-                        newColors[objectID] = color
-                        let currentOpacity = shape.typography?.fillOpacity ?? defaultFillOpacity
-                        oldOpacities[objectID] = currentOpacity
-                        newOpacities[objectID] = currentOpacity
-                    case .stroke:
-                        oldColors[objectID] = shape.typography?.strokeColor ?? .clear
-                        newColors[objectID] = color
-                        let currentOpacity = shape.typography?.strokeOpacity ?? defaultStrokeOpacity
-                        oldOpacities[objectID] = currentOpacity
-                        newOpacities[objectID] = currentOpacity
-                    }
-                case .shape(let shape), .image(let shape), .warp(let shape), .clipMask(let shape), .guide(let shape):
-                    switch viewState.activeColorTarget {
-                    case .fill:
-                        oldColors[objectID] = shape.fillStyle?.color ?? .black
-                        newColors[objectID] = color
-                        let currentOpacity = shape.fillStyle?.opacity ?? defaultFillOpacity
-                        oldOpacities[objectID] = currentOpacity
-                        newOpacities[objectID] = currentOpacity
-                    case .stroke:
-                        oldColors[objectID] = shape.strokeStyle?.color ?? .clear
-                        newColors[objectID] = color
-                        let currentOpacity = shape.strokeStyle?.opacity ?? defaultStrokeOpacity
-                        oldOpacities[objectID] = currentOpacity
-                        newOpacities[objectID] = currentOpacity
-                    }
-                case .group(let shape), .clipGroup(let shape):
-                    switch viewState.activeColorTarget {
-                    case .fill:
-                        oldColors[objectID] = shape.fillStyle?.color ?? .black
-                        newColors[objectID] = color
-                        let currentOpacity = shape.fillStyle?.opacity ?? defaultFillOpacity
-                        oldOpacities[objectID] = currentOpacity
-                        newOpacities[objectID] = currentOpacity
-                        if !shape.memberIDs.isEmpty {
-                            for memberID in shape.memberIDs {
-                                if let memberObj = snapshot.objects[memberID] {
-                                    switch memberObj.objectType {
-                                    case .text(let memberShape):
-                                        oldColors[memberID] = memberShape.typography?.fillColor ?? .black
-                                        newColors[memberID] = color
-                                        let childOpacity = memberShape.typography?.fillOpacity ?? defaultFillOpacity
-                                        oldOpacities[memberID] = childOpacity
-                                        newOpacities[memberID] = childOpacity
-                                    case .shape(let memberShape), .image(let memberShape), .warp(let memberShape), .clipMask(let memberShape), .guide(let memberShape):
-                                        oldColors[memberID] = memberShape.fillStyle?.color ?? .black
-                                        newColors[memberID] = color
-                                        let childOpacity = memberShape.fillStyle?.opacity ?? defaultFillOpacity
-                                        oldOpacities[memberID] = childOpacity
-                                        newOpacities[memberID] = childOpacity
-                                    case .group, .clipGroup:
-                                        break
-                                    }
-                                }
-                            }
-                        } else {
-                            for childShape in shape.groupedShapes {
-                                if let typography = childShape.typography {
-                                    oldColors[childShape.id] = typography.fillColor
-                                    newColors[childShape.id] = color
-                                    let childOpacity = typography.fillOpacity
-                                    oldOpacities[childShape.id] = childOpacity
-                                    newOpacities[childShape.id] = childOpacity
-                                } else {
-                                    oldColors[childShape.id] = childShape.fillStyle?.color ?? .black
-                                    newColors[childShape.id] = color
-                                    let childOpacity = childShape.fillStyle?.opacity ?? defaultFillOpacity
-                                    oldOpacities[childShape.id] = childOpacity
-                                    newOpacities[childShape.id] = childOpacity
-                                }
-                            }
-                        }
-                    case .stroke:
-                        oldColors[objectID] = shape.strokeStyle?.color ?? .clear
-                        newColors[objectID] = color
-                        let currentOpacity = shape.strokeStyle?.opacity ?? defaultStrokeOpacity
-                        oldOpacities[objectID] = currentOpacity
-                        newOpacities[objectID] = currentOpacity
-                        if !shape.memberIDs.isEmpty {
-                            for memberID in shape.memberIDs {
-                                if let memberObj = snapshot.objects[memberID] {
-                                    switch memberObj.objectType {
-                                    case .text(let memberShape):
-                                        oldColors[memberID] = memberShape.typography?.strokeColor ?? .clear
-                                        newColors[memberID] = color
-                                        let childOpacity = memberShape.typography?.strokeOpacity ?? defaultStrokeOpacity
-                                        oldOpacities[memberID] = childOpacity
-                                        newOpacities[memberID] = childOpacity
-                                    case .shape(let memberShape), .image(let memberShape), .warp(let memberShape), .clipMask(let memberShape), .guide(let memberShape):
-                                        oldColors[memberID] = memberShape.strokeStyle?.color ?? .clear
-                                        newColors[memberID] = color
-                                        let childOpacity = memberShape.strokeStyle?.opacity ?? defaultStrokeOpacity
-                                        oldOpacities[memberID] = childOpacity
-                                        newOpacities[memberID] = childOpacity
-                                    case .group, .clipGroup:
-                                        break
-                                    }
-                                }
-                            }
-                        } else {
-                            for childShape in shape.groupedShapes {
-                                if let typography = childShape.typography {
-                                    oldColors[childShape.id] = typography.strokeColor
-                                    newColors[childShape.id] = color
-                                    let childOpacity = typography.strokeOpacity
-                                    oldOpacities[childShape.id] = childOpacity
-                                    newOpacities[childShape.id] = childOpacity
-                                } else {
-                                    oldColors[childShape.id] = childShape.strokeStyle?.color ?? .clear
-                                    newColors[childShape.id] = color
-                                    let childOpacity = childShape.strokeStyle?.opacity ?? defaultStrokeOpacity
-                                    oldOpacities[childShape.id] = childOpacity
-                                    newOpacities[childShape.id] = childOpacity
-                                }
-                            }
-                        }
-                    }
+        // Whole-shape snapshots of the selection and every (nested) group member, so undo also
+        // removes a fill/stroke the pick created, and a pick that changes nothing adds no undo step.
+        modifySelectedShapesWithUndo(preCapture: {
+            var ids: [UUID] = []
+            func visit(_ id: UUID) {
+                guard !ids.contains(id), let shape = snapshot.objects[id]?.shape else { return }
+                ids.append(id)
+                if shape.isGroup || shape.isClippingGroup {
+                    shape.memberIDs.forEach(visit)
                 }
             }
-        }
-        if shouldSaveUndo && !oldColors.isEmpty {
-            let commandTarget: ChangeColorCommand.ColorTarget = (viewState.activeColorTarget == .fill) ? .fill : .stroke
-            let command = ChangeColorCommand(
-                objectIDs: Array(viewState.selectedObjectIDs),
-                target: commandTarget,
-                oldColors: oldColors,
-                newColors: newColors,
-                oldOpacities: oldOpacities,
-                newOpacities: newOpacities
-            )
-            executeCommand(command)
-        }
+            getActiveShapeIDs().forEach(visit)
+            for id in ids {
+                guard let object = snapshot.objects[id] else { continue }
+                let isText: Bool
+                if case .text = object.objectType { isText = true } else { isText = false }
+                updateShapeByID(id) { shape in
+                    applyColorToShape(&shape, color: color, isText: isText)
+                }
+            }
+        })
         switch viewState.activeColorTarget {
         case .fill:
             defaultFillColor = color
         case .stroke:
             defaultStrokeColor = color
-        }
-        for objectID in viewState.selectedObjectIDs {
-            if let vectorObject = snapshot.objects[ objectID] {
-                switch vectorObject.objectType {
-                case .group(let groupShape), .clipGroup(let groupShape):
-                    if !groupShape.memberIDs.isEmpty {
-                        for memberID in groupShape.memberIDs {
-                            if let memberObject = snapshot.objects[memberID] {
-                                switch memberObject.objectType {
-                                case .text:
-                                    updateShapeByID(memberID) { shape in
-                                        applyColorToShape(&shape, color: color, isText: true)
-                                    }
-                                case .shape, .image, .warp, .clipGroup, .clipMask, .guide:
-                                    updateShapeByID(memberID) { shape in
-                                        applyColorToShape(&shape, color: color, isText: false)
-                                    }
-                                case .group:
-                                    updateShapeByID(memberID) { shape in
-                                        applyColorToShape(&shape, color: color, isText: false)
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        for childShape in groupShape.groupedShapes {
-                            if let childObject = snapshot.objects[ childShape.id] {
-                                switch childObject.objectType {
-                                case .text:
-                                    updateShapeByID(childShape.id) { shape in
-                                        applyColorToShape(&shape, color: color, isText: true)
-                                    }
-                                case .shape, .image, .warp, .clipGroup, .clipMask, .guide:
-                                    updateShapeByID(childShape.id) { shape in
-                                        applyColorToShape(&shape, color: color, isText: false)
-                                    }
-                                case .group:
-                                    updateShapeByID(childShape.id) { shape in
-                                        applyColorToShape(&shape, color: color, isText: false)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                case .text:
-                    updateShapeByID(objectID) { shape in
-                        applyColorToShape(&shape, color: color, isText: true)
-                    }
-                case .shape, .image, .warp, .clipMask, .guide:
-                    updateShapeByID(objectID) { shape in
-                        applyColorToShape(&shape, color: color, isText: false)
-                    }
-                }
-            }
         }
     }
 
