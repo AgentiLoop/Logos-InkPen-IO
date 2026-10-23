@@ -107,32 +107,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return error
     }
 
+    // No silent save at quit: AppKit already asked "Save changes?" for each edited
+    // document, and a "Don't Save" answer must leave the file untouched.
     func applicationWillTerminate(_ notification: Notification) {
-        saveAllOpenDocuments()
         DocumentStateRegistry.shared.forceCleanupAll()
         UserDefaults.standard.synchronize()
-    }
-
-    private func saveAllOpenDocuments() {
-        let documentController = NSDocumentController.shared
-        for document in documentController.documents {
-            if document.isDocumentEdited {
-                do {
-                    if let fileURL = document.fileURL {
-                        try document.writeSafely(to: fileURL, ofType: document.fileType ?? "io.logos.logos-inkpen-io", for: .saveOperation)
-                    } else {
-                        if let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
-                            let dateFormatter = DateFormatter()
-                            dateFormatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
-                            let timestamp = dateFormatter.string(from: Date())
-                            let autoSaveURL = documentsURL.appendingPathComponent("AutoSave_\(timestamp).inkpen")
-                            try document.writeSafely(to: autoSaveURL, ofType: "io.logos.logos-inkpen-io", for: .saveAsOperation)
-                        }
-                    }
-                } catch {
-                    Log.error("❌ Failed to auto-save document: \(error)", category: .error)
-                }
-            }
-        }
     }
 }

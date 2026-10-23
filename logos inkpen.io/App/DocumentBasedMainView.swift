@@ -62,6 +62,9 @@ struct DocumentBasedMainView: View {
         }
         .background(HostingWindowFinder(callback: { window in
             self.viewWindow = window
+            if let w = window, let nsDocument = NSDocumentController.shared.document(for: w) {
+                DocumentSavePolicy.disableAutosaveInPlace(for: nsDocument)
+            }
             if !isTabActive, let w = window, (w.isKeyWindow || w.isMainWindow) {
                 isTabActive = true
                 MemoryDiag.checkpoint("Tab ACTIVATED (first appear)")
@@ -94,9 +97,11 @@ struct DocumentBasedMainView: View {
         }
         .onReceive(document.commandManager.contentDidChange) { _ in
             // FileDocument never sees edits made inside the VectorDocument class,
-            // so tell the owning NSDocument directly (dirty dot, close prompt, autosave).
+            // so tell the owning NSDocument directly (dirty dot, close prompt).
+            // Autosave-in-place is off: the file is only written when the user saves.
             guard let window = viewWindow,
                   let nsDocument = NSDocumentController.shared.document(for: window) else { return }
+            DocumentSavePolicy.disableAutosaveInPlace(for: nsDocument)
             nsDocument.updateChangeCount(.changeDone)
         }
         .onDisappear {
