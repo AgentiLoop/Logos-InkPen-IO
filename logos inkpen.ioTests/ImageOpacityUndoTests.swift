@@ -19,7 +19,7 @@ final class ImageOpacityUndoTests: XCTestCase {
         let svg = """
         <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="400" height="300">
           <image x="10" y="10" width="40" height="40" xlink:href="data:image/png;base64,\(png)"/>
-          <image x="100" y="10" width="40" height="40" xlink:href="data:image/png;base64,\(png)"/>
+          <image x="100" y="10" width="40" height="40" opacity="0.5" xlink:href="data:image/png;base64,\(png)"/>
           <rect x="200" y="10" width="40" height="40" fill="red"/>
         </svg>
         """
@@ -39,8 +39,7 @@ final class ImageOpacityUndoTests: XCTestCase {
         let image = try XCTUnwrap(images.first)
         let half = try XCTUnwrap(images.last)
         XCTAssertEqual(doc.snapshot.objects[image]?.shape.opacity, 1)
-        // SVG import doesn't read an <image>'s opacity attribute, so set it here (outside undo).
-        doc.updateShapeOpacityInUnified(id: half, opacity: 0.5)
+        XCTAssertEqual(doc.snapshot.objects[half]?.shape.opacity, 0.5)
         let rect = try XCTUnwrap(ids.first { id in
             guard let s = doc.snapshot.objects[id]?.shape else { return false }
             return s.embeddedImageData == nil

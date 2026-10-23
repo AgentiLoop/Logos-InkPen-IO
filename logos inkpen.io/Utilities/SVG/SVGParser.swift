@@ -905,6 +905,10 @@ class SVGParser: NSObject, XMLParserDelegate {
             geometricType: .rectangle
         )
         imageShape.fillStyle = nil
+        let styleOpacity = mergedAttributes["style"].flatMap { parseStyleAttribute($0)["opacity"] }
+        if let opacity = parseLength(styleOpacity ?? mergedAttributes["opacity"]) {
+            imageShape.opacity = min(max(opacity, 0), 1)
+        }
         if imageHref.hasPrefix("data:") {
             if let dataRange = imageHref.range(of: "base64,") {
                 let base64String = String(imageHref[dataRange.upperBound...])

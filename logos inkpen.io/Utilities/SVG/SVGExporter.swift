@@ -707,13 +707,14 @@ class SVGExporter {
             let base64 = mutableData.base64EncodedString()
             href = "data:image/png;base64,\(base64)"
         }
+        let opacityAttr = shape.opacity < 1 ? " opacity=\"\(shape.opacity)\"" : ""
         var svg = ""
         if let clipId = shape.clippedByShapeID {
             svg += "<g clip-path=\"url(#clip_\(clipId.uuidString))\">\n"
-            svg += "  <image x=\"\(x)\" y=\"\(y)\" width=\"\(width)\" height=\"\(height)\" xlink:href=\"\(href)\" preserveAspectRatio=\"none\"/>\n"
+            svg += "  <image x=\"\(x)\" y=\"\(y)\" width=\"\(width)\" height=\"\(height)\"\(opacityAttr) xlink:href=\"\(href)\" preserveAspectRatio=\"none\"/>\n"
             svg += "</g>\n"
         } else {
-            svg += "<image x=\"\(x)\" y=\"\(y)\" width=\"\(width)\" height=\"\(height)\" xlink:href=\"\(href)\" preserveAspectRatio=\"none\"/>\n"
+            svg += "<image x=\"\(x)\" y=\"\(y)\" width=\"\(width)\" height=\"\(height)\"\(opacityAttr) xlink:href=\"\(href)\" preserveAspectRatio=\"none\"/>\n"
         }
         return svg
     }
