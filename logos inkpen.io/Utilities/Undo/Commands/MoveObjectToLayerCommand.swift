@@ -11,12 +11,22 @@ class MoveObjectToLayerCommand: BaseCommand {
         self.moves = moves
     }
 
+    /// Object order of every affected layer before the move, so undo puts each object back at
+    /// its old stacking position instead of on top of its old layer.
+    private var layerOrderBefore: [Int: [UUID]] = [:]
+
     override func execute(on document: VectorDocument) {
         var affectedLayers = Set<Int>()
         for move in moves {
-            applyMove(objectID: move.objectID, toLayerIndex: move.newLayerIndex, document: document)
             affectedLayers.insert(move.oldLayerIndex)
             affectedLayers.insert(move.newLayerIndex)
+        }
+        layerOrderBefore = [:]
+        for layerIndex in affectedLayers where layerIndex >= 0 && layerIndex < document.snapshot.layers.count {
+            layerOrderBefore[layerIndex] = document.snapshot.layers[layerIndex].objectIDs
+        }
+        for move in moves {
+            applyMove(objectID: move.objectID, toLayerIndex: move.newLayerIndex, document: document)
         }
         document.triggerLayerUpdates(for: affectedLayers)
     }
@@ -27,6 +37,9 @@ class MoveObjectToLayerCommand: BaseCommand {
             applyMove(objectID: move.objectID, toLayerIndex: move.oldLayerIndex, document: document)
             affectedLayers.insert(move.oldLayerIndex)
             affectedLayers.insert(move.newLayerIndex)
+        }
+        for (layerIndex, objectIDs) in layerOrderBefore where layerIndex < document.snapshot.layers.count {
+            document.snapshot.layers[layerIndex].objectIDs = objectIDs
         }
         document.triggerLayerUpdates(for: affectedLayers)
     }

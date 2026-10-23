@@ -114,6 +114,12 @@ extension VectorDocument {
     }
 
     func addLayer(name: String = "New Layer") {
+        let before = LayerStructureCommand.State(of: self)
+        insertLayer(name: name)
+        commandManager.recordCompletedCommand(LayerStructureCommand(before: before, after: .init(of: self)))
+    }
+
+    private func insertLayer(name: String) {
         let colors: [LayerColor] = [.gray, .blue, .green, .orange, .purple, .red, .pink, .yellow, .cyan]
         let color = colors[snapshot.layers.count % colors.count]
 
@@ -180,11 +186,17 @@ extension VectorDocument {
         guard index >= 0 && index < snapshot.layers.count && snapshot.layers.count > 1 else {
             return
         }
+        let before = LayerStructureCommand.State(of: self)
         let removingSelectedLayer = settings.selectedLayerId == snapshot.layers[index].id
-        for objectID in snapshot.layers[index].objectIDs {
-            snapshot.objects.removeValue(forKey: objectID)
-            ImageContentRegistry.remove(for: objectID, in: self)
+        // Group members are not listed by the layer; remove them with their group.
+        // Image data stays registered (as with Delete) so undo can bring the images back.
+        var removing = snapshot.layers[index].objectIDs
+        while let objectID = removing.popLast() {
+            if let shape = snapshot.objects.removeValue(forKey: objectID)?.shape {
+                removing.append(contentsOf: shape.memberIDs)
+            }
             viewState.selectedObjectIDs.remove(objectID)
+            viewState.orderedSelectedObjectIDs.removeAll { $0 == objectID }
         }
         snapshot.layers.remove(at: index)
         for layerIdx in index..<snapshot.layers.count {
@@ -204,6 +216,7 @@ extension VectorDocument {
             validateSelectedLayer()
         }
         changeNotifier.notifyLayersChanged()
+        commandManager.recordCompletedCommand(LayerStructureCommand(before: before, after: .init(of: self)))
     }
 
     func ensureGuidesLayerExists() {
@@ -261,7 +274,7 @@ extension VectorDocument {
             }
         }
         if snapshot.layers.count <= 3 {
-            addLayer(name: "Layer 1")
+            insertLayer(name: "Layer 1")
         }
     }
 
@@ -294,8 +307,14 @@ extension VectorDocument {
         }
         let finalTargetIndex = targetLayerIndex <= 2 ? 3 : targetLayerIndex
 
+        // Callers may pass the selection Set; move back-to-front so the stacking order is kept.
+        let stackPosition: (UUID) -> (Int, Int) = { id in
+            guard let layerIndex = self.snapshot.objects[id]?.layerIndex,
+                  layerIndex >= 0 && layerIndex < self.snapshot.layers.count else { return (Int.max, Int.max) }
+            return (layerIndex, self.snapshot.layers[layerIndex].objectIDs.firstIndex(of: id) ?? Int.max)
+        }
         var moves: [(objectID: UUID, oldLayerIndex: Int, newLayerIndex: Int)] = []
-        for objectId in objectIds {
+        for objectId in objectIds.sorted(by: { stackPosition($0) < stackPosition($1) }) {
             guard let object = snapshot.objects[objectId] else {
                 continue
             }
@@ -398,7 +417,9 @@ extension VectorDocument {
             let insertIndex = draggingUp ? newTargetIndex : newTargetIndex + 1
             newObjectIDs.insert(objectId, at: insertIndex)
         }
-        updateLayerObjectIDs(layerIndex: layerIndex, newObjectIDs: newObjectIDs)
+        let oldObjectIDs = snapshot.layers[layerIndex].objectIDs
+        guard newObjectIDs != oldObjectIDs else { return }
+        commandManager.execute(LayerObjectOrderCommand(layerIndex: layerIndex, oldObjectIDs: oldObjectIDs, newObjectIDs: newObjectIDs))
         changeNotifier.notifyLayersChanged()
     }
 
