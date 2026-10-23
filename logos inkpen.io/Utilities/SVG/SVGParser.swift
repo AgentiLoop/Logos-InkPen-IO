@@ -905,10 +905,6 @@ class SVGParser: NSObject, XMLParserDelegate {
             geometricType: .rectangle
         )
         imageShape.fillStyle = nil
-        let styleOpacity = mergedAttributes["style"].flatMap { parseStyleAttribute($0)["opacity"] }
-        if let opacity = parseLength(styleOpacity ?? mergedAttributes["opacity"]) {
-            imageShape.opacity = min(max(opacity, 0), 1)
-        }
         if imageHref.hasPrefix("data:") {
             if let dataRange = imageHref.range(of: "base64,") {
                 let base64String = String(imageHref[dataRange.upperBound...])
@@ -1097,6 +1093,7 @@ class SVGParser: NSObject, XMLParserDelegate {
         }
         let stroke = parseStrokeStyle(mergedAttributes)
         let fill = parseFillStyle(mergedAttributes)
+        let opacity = min(max(parseLength(mergedAttributes["opacity"]) ?? 1.0, 0), 1)
         let transform: CGAffineTransform
         if mergedAttributes["transform"] != nil {
             let shapeTransform = parseTransform(mergedAttributes["transform"] ?? "")
@@ -1152,7 +1149,7 @@ class SVGParser: NSObject, XMLParserDelegate {
                 s.width *= avgScale
                 resolvedStroke = s
             }
-            return VectorShape(
+            var shape = VectorShape(
                 name: shapeName,
                 path: resolvedPath,
                 geometricType: isCompound ? nil : geometricType,
@@ -1161,8 +1158,10 @@ class SVGParser: NSObject, XMLParserDelegate {
                 transform: .identity,
                 isCompoundPath: isCompound
             )
+            shape.opacity = opacity
+            return shape
         }
-        return VectorShape(
+        var shape = VectorShape(
             name: shapeName,
             path: resolvedPath,
             geometricType: isCompound ? nil : geometricType,
@@ -1171,6 +1170,8 @@ class SVGParser: NSObject, XMLParserDelegate {
             transform: transform,
             isCompoundPath: isCompound
         )
+        shape.opacity = opacity
+        return shape
     }
 
     internal func checkForClipPath(_ attributes: [String: String]) -> (shouldClip: Bool, clipPathId: String?) {

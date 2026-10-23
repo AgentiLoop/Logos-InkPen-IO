@@ -103,7 +103,7 @@ class SVGExporter {
             return svg
         }
         if (shape.isGroup || shape.isClippingGroup) && !shape.memberIDs.isEmpty, let doc = document {
-            svg += "<g id=\"group_\(shape.id.uuidString)\">\n"
+            svg += "<g id=\"group_\(shape.id.uuidString)\"\(shape.opacity < 1 ? " opacity=\"\(shape.opacity)\"" : "")>\n"
             for memberID in shape.memberIDs {
                 if let memberShape = doc.findShape(by: memberID) {
                     if !memberShape.isVisible { continue }
@@ -118,7 +118,7 @@ class SVGExporter {
             return svg
         }
         if shape.isGroup && !shape.groupedShapes.isEmpty {
-            svg += "<g id=\"group_\(shape.id.uuidString)\">\n"
+            svg += "<g id=\"group_\(shape.id.uuidString)\"\(shape.opacity < 1 ? " opacity=\"\(shape.opacity)\"" : "")>\n"
             for groupedShape in shape.groupedShapes {
                 if !groupedShape.isVisible { continue }
                 svg += exportShape(groupedShape, dpiScale: dpiScale, document: document)
@@ -132,6 +132,12 @@ class SVGExporter {
         }
         let pathData = generatePathData(from: shape.path, transform: shape.transform, dpiScale: dpiScale)
         svg += "<path d=\"\(pathData)\""
+        if shape.path.fillRule == .evenOdd {
+            svg += " fill-rule=\"evenodd\""
+        }
+        if shape.opacity < 1 {
+            svg += " opacity=\"\(shape.opacity)\""
+        }
         if let clipId = shape.clippedByShapeID {
             svg += " clip-path=\"url(#clip_\(clipId.uuidString))\""
         }
