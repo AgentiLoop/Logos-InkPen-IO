@@ -503,7 +503,9 @@ struct VectorShape: Hashable, Identifiable {
             return
         }
         let pathBounds = path.cgPath.boundingBoxOfPath
-        if !pathBounds.isInfinite && !pathBounds.isNull && !pathBounds.isEmpty {
+        // Horizontal/vertical lines have zero width or height (isEmpty) but are real geometry;
+        // skipping them left their bounds stale after every move, so they couldn't be hit-tested.
+        if !pathBounds.isInfinite && !pathBounds.isNull {
             bounds = pathBounds
         }
     }
