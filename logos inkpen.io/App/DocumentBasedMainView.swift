@@ -349,6 +349,11 @@ struct DocumentBasedMainView: View {
                 document.viewState.currentTool = appState.defaultTool
                 hasInitializedTool = true
             }
+            // onDisappear detaches the undo manager; if SwiftUI shows this view again
+            // (tab moved/merged), reattach it or every undo silently does nothing.
+            if document.commandManager.document == nil {
+                document.commandManager.document = document
+            }
             documentState.setDocument(document)
             DispatchQueue.main.async {
                 if let window = self.viewWindow, window.isKeyWindow {
