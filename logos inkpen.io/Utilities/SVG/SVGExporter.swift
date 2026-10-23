@@ -36,7 +36,7 @@ class SVGExporter {
              style="background-color: transparent;">
         """
         svg += "\n<defs>\n"
-        svg += generateGradientDefs(from: document)
+        svg += generateGradientDefs(from: document, scale: isAutoDesk ? dpiScale : 1.0)
         svg += generateClipPathDefs(from: document)
         svg += "</defs>\n"
         if includeInkpenData {
@@ -754,7 +754,7 @@ class SVGExporter {
         return pathData.trimmingCharacters(in: .whitespaces)
     }
 
-    private func generateGradientDefs(from document: VectorDocument) -> String {
+    private func generateGradientDefs(from document: VectorDocument, scale: CGFloat) -> String {
         var defs = ""
         var processedGradients = Set<Int>()
         for vectorObject in document.snapshot.objects.values {
@@ -764,7 +764,7 @@ class SVGExporter {
                     let hash = gradient.hashValue
                     if !processedGradients.contains(hash) {
                         processedGradients.insert(hash)
-                        defs += generateGradientDef(gradient, id: "gradient_\(hash)")
+                        defs += generateGradientDef(gradient, id: "gradient_\(hash)", scale: scale)
                     }
                 }
                 if let strokeStyle = shape.strokeStyle,
@@ -772,7 +772,7 @@ class SVGExporter {
                     let hash = gradient.hashValue
                     if !processedGradients.contains(hash) {
                         processedGradients.insert(hash)
-                        defs += generateGradientDef(gradient, id: "gradient_\(hash)")
+                        defs += generateGradientDef(gradient, id: "gradient_\(hash)", scale: scale)
                     }
                 }
             }
@@ -818,39 +818,79 @@ class SVGExporter {
         return nil
     }
 
-    private func generateGradientDef(_ gradient: VectorGradient, id: String) -> String {
+    private func generateGradientDef(_ gradient: VectorGradient, id: String, scale: CGFloat) -> String {
         switch gradient {
         case .linear(let linearGradient):
-            return generateLinearGradientDef(linearGradient, id: id)
+            return generateLinearGradientDef(linearGradient, id: id, scale: scale)
         case .radial(let radialGradient):
-            return generateRadialGradientDef(radialGradient, id: id)
+            return generateRadialGradientDef(radialGradient, id: id, scale: scale)
         }
     }
 
-    private func generateLinearGradientDef(_ gradient: LinearGradient, id: String) -> String {
+    private func generateLinearGradientDef(_ gradient: LinearGradient, id: String, scale userScale: CGFloat) -> String {
         var svg = "<linearGradient id=\"\(id)\""
-
-        let angle = gradient.angle * .pi / 180
-        let x1 = 0.5 - cos(angle) * 0.5
-        let y1 = 0.5 - sin(angle) * 0.5
-        let x2 = 0.5 + cos(angle) * 0.5
-        let y2 = 0.5 + sin(angle) * 0.5
-        svg += " x1=\"\(x1 * 100)%\" y1=\"\(y1 * 100)%\""
-        svg += " x2=\"\(x2 * 100)%\" y2=\"\(y2 * 100)%\">\n"
-        for stop in gradient.stops {
-            svg += "<stop offset=\"\(stop.position * 100)%\" stop-color=\"\(stop.color.svgColor)\"/>\n"
+        if gradient.units == .userSpaceOnUse {
+            svg += " gradientUnits=\"userSpaceOnUse\""
+            svg += " x1=\"\(gradient.startPoint.x * userScale)\" y1=\"\(gradient.startPoint.y * userScale)\""
+            svg += " x2=\"\(gradient.endPoint.x * userScale)\" y2=\"\(gradient.endPoint.y * userScale)\""
+        } else {
+            // Same geometry the canvas draws: centred on the origin point, along the stored angle,
+            // as long as the start → end distance.
+            let angle = gradient.angle * .pi / 180
+            let scale = gradient.scaleX
+            let centerX = gradient.originPoint.x * scale
+            let centerY = gradient.originPoint.y * scale
+            let halfLength = gradient.endPoint.distance(to: gradient.startPoint) * scale / 2
+            let x1 = centerX - cos(angle) * halfLength
+            let y1 = centerY - sin(angle) * halfLength
+            let x2 = centerX + cos(angle) * halfLength
+            let y2 = centerY + sin(angle) * halfLength
+            svg += " x1=\"\(x1 * 100)%\" y1=\"\(y1 * 100)%\""
+            svg += " x2=\"\(x2 * 100)%\" y2=\"\(y2 * 100)%\""
         }
+        svg += spreadMethodAttribute(gradient.spreadMethod) + ">\n"
+        svg += generateGradientStops(gradient.stops)
         svg += "</linearGradient>\n"
         return svg
     }
 
-    private func generateRadialGradientDef(_ gradient: RadialGradient, id: String) -> String {
+    private func generateRadialGradientDef(_ gradient: RadialGradient, id: String, scale userScale: CGFloat) -> String {
         var svg = "<radialGradient id=\"\(id)\""
-        svg += " cx=\"50%\" cy=\"50%\" r=\"50%\">\n"
-        for stop in gradient.stops {
-            svg += "<stop offset=\"\(stop.position * 100)%\" stop-color=\"\(stop.color.svgColor)\"/>\n"
+        if gradient.units == .userSpaceOnUse {
+            let center = gradient.centerPoint
+            svg += " gradientUnits=\"userSpaceOnUse\""
+            svg += " cx=\"\(center.x * userScale)\" cy=\"\(center.y * userScale)\" r=\"\(gradient.radius * userScale)\""
+            if let focal = gradient.focalPoint, focal != center {
+                svg += " fx=\"\(focal.x * userScale)\" fy=\"\(focal.y * userScale)\""
+            }
+        } else {
+            // The canvas centres a bounding-box radial gradient on its origin point; its focal
+            // point is stored as an offset from that centre.
+            let center = gradient.originPoint
+            svg += " cx=\"\(center.x * 100)%\" cy=\"\(center.y * 100)%\" r=\"\(gradient.radius * 100)%\""
+            if let offset = gradient.focalPoint, offset != .zero {
+                svg += " fx=\"\((center.x + offset.x) * 100)%\" fy=\"\((center.y + offset.y) * 100)%\""
+            }
         }
+        svg += spreadMethodAttribute(gradient.spreadMethod) + ">\n"
+        svg += generateGradientStops(gradient.stops)
         svg += "</radialGradient>\n"
+        return svg
+    }
+
+    private func spreadMethodAttribute(_ spreadMethod: GradientSpreadMethod) -> String {
+        spreadMethod == .pad ? "" : " spreadMethod=\"\(spreadMethod.rawValue)\""
+    }
+
+    private func generateGradientStops(_ stops: [GradientStop]) -> String {
+        var svg = ""
+        for stop in stops {
+            svg += "<stop offset=\"\(stop.position * 100)%\" stop-color=\"\(stop.color.svgColor)\""
+            if stop.opacity < 1 {
+                svg += " stop-opacity=\"\(stop.opacity)\""
+            }
+            svg += "/>\n"
+        }
         return svg
     }
 
