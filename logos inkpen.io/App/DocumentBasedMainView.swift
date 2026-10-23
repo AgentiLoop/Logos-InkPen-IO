@@ -52,6 +52,7 @@ struct DocumentBasedMainView: View {
 
     @State private var viewWindow: NSWindow? = nil
     @State private var isTabActive: Bool = true
+    @State private var ownerDocument = WeakDocumentRef()
     var body: some View {
         Group {
             if isTabActive {
@@ -63,6 +64,7 @@ struct DocumentBasedMainView: View {
         .background(HostingWindowFinder(callback: { window in
             self.viewWindow = window
             if let w = window, let nsDocument = NSDocumentController.shared.document(for: w) {
+                ownerDocument.document = nsDocument
                 DocumentSavePolicy.disableAutosaveInPlace(for: nsDocument)
             }
             if !isTabActive, let w = window, (w.isKeyWindow || w.isMainWindow) {
@@ -105,15 +107,23 @@ struct DocumentBasedMainView: View {
             nsDocument.updateChangeCount(.changeDone)
         }
         .onDisappear {
-            documentState.cleanup()
-            document.imageStorage.removeAll()
-            document.lastDrawnImageHash.removeAll()
-            document.snapshot.objects.removeAll()
-            document.snapshot.layers.removeAll()
-            document.commandManager.clear()
-            document.commandManager.document = nil
-            MemoryDiag.checkpoint("Tab CLOSED")
+            // SwiftUI can fire onDisappear while the document is still open (tab moved or
+            // merged). Wiping the snapshot then left an empty document that the next save
+            // wrote over the file. Only free memory once the document is really closed.
+            let owner = ownerDocument
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                if let nsDocument = owner.document,
+                   NSDocumentController.shared.documents.contains(nsDocument) {
+                    return
+                }
+                documentState.cleanup()
+                document.imageStorage.removeAll()
+                document.lastDrawnImageHash.removeAll()
+                document.snapshot.objects.removeAll()
+                document.snapshot.layers.removeAll()
+                document.commandManager.clear()
+                document.commandManager.document = nil
+                MemoryDiag.checkpoint("Tab CLOSED")
                 if NSDocumentController.shared.documents.isEmpty {
                     SharedMetalDevice.releaseAll()
                     MemoryDiag.checkpoint("Metal singletons released (no documents)")
@@ -442,6 +452,12 @@ struct DocumentBasedMainView: View {
             }
         }
     }
+}
+
+/// Weak link from the view to its NSDocument, so onDisappear can tell a closed
+/// document from one whose view was only hidden or moved.
+final class WeakDocumentRef {
+    weak var document: NSDocument?
 }
 
 struct HostingWindowFinder: NSViewRepresentable {
