@@ -171,7 +171,7 @@ extension VectorDocument {
                 translatedElements.append(.close)
             }
         }
-        shape.path = VectorPath(elements: translatedElements)
+        shape.path.elements = translatedElements
         shape.updateBounds()
     }
 }

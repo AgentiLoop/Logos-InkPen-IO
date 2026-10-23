@@ -174,7 +174,8 @@ extension VectorDocument {
                 updatedElements.append(.close)
             }
         }
-        let updatedPath = VectorPath(elements: updatedElements, isClosed: shape.path.isClosed)
+        var updatedPath = shape.path
+        updatedPath.elements = updatedElements
 
         var movedShape = shape
         movedShape.path = updatedPath

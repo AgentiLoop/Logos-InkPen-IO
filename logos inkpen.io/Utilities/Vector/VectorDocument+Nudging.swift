@@ -79,7 +79,9 @@ extension VectorDocument {
                 nudgedElements.append(.close)
             }
         }
-        return VectorPath(elements: nudgedElements, isClosed: path.isClosed)
+        var nudgedPath = path
+        nudgedPath.elements = nudgedElements
+        return nudgedPath
     }
 
     private func nudgeSelectedPoints(by nudgeAmount: CGVector) {
@@ -122,7 +124,7 @@ extension VectorDocument {
                     break
                 }
             }
-            shape.path = VectorPath(elements: elements, isClosed: shape.path.isClosed)
+            shape.path.elements = elements
             shape.updateBounds()
             updateShapeByID(shapeID, silent: false) { s in
                 s = shape

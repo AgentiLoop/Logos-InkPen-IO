@@ -245,7 +245,7 @@ extension VectorDocument {
                         transformedElements.append(.close)
                     }
                 }
-                shape.path = VectorPath(elements: transformedElements, isClosed: shape.path.isClosed)
+                shape.path.elements = transformedElements
                 shape.transform = .identity
                 shape.updateBounds()
             }
