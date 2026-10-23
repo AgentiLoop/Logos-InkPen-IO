@@ -173,6 +173,12 @@ struct DocumentBasedMainView: View {
                             .onAppear {
                                 viewportSize = geometry.size
                             }
+                        if AutomationProbe.isEnabled {
+                            AutomationProbeView(document: document, zoomLevel: zoomLevel, canvasOffset: canvasOffset)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .allowsHitTesting(false)
+                                .zIndex(2)
+                        }
                         RulersView(
                             document: document,
                             geometry: geometry,

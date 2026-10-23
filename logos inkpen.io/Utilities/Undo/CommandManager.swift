@@ -12,6 +12,8 @@ class CommandManager: ObservableObject {
 
     var undoCount: Int { undoStack.count }
     var redoCount: Int { redoStack.count }
+    /// Command type names, oldest first (read by the automation probe).
+    var undoStackNames: [String] { undoStack.map { String(describing: type(of: $0)) } }
 
     /// Fires when document content changes through a command, undo, or redo.
     /// Selection-only commands do not fire. Used to mark the owning NSDocument
