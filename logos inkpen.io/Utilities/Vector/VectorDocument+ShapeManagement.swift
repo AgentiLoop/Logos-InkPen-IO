@@ -323,6 +323,9 @@ extension VectorDocument {
                 }
                 let offsetTransform = CGAffineTransform(translationX: 10, y: 10)
                 newShape = applyTransformToShapeCoordinates(shape: newShape, transform: offsetTransform)
+                newShape.memberIDs = shape.memberIDs.compactMap {
+                    duplicateGroupMember($0, offset: offsetTransform, layerIndex: layerIndex)
+                }
                 newShape.updateBounds()
                 addShape(newShape, to: layerIndex)
                 newShapeIDs.insert(newShape.id)
@@ -331,6 +334,24 @@ extension VectorDocument {
             }
         }
         viewState.selectedObjectIDs = newShapeIDs
+    }
+
+    /// Copies a group member (and its own members) under fresh IDs so a duplicated group
+    /// never shares member objects with the original. Members live in `snapshot.objects` only.
+    private func duplicateGroupMember(_ memberID: UUID, offset: CGAffineTransform, layerIndex: Int) -> UUID? {
+        guard let member = snapshot.objects[memberID]?.shape else { return nil }
+        var copy = applyTransformToShapeCoordinates(shape: member, transform: offset)
+        copy.id = UUID()
+        if ImageContentRegistry.containsImage(member, in: self),
+           let image = ImageContentRegistry.image(for: member.id, in: self) {
+            ImageContentRegistry.register(image: image, for: copy.id, in: self)
+        }
+        copy.memberIDs = member.memberIDs.compactMap {
+            duplicateGroupMember($0, offset: offset, layerIndex: layerIndex)
+        }
+        copy.updateBounds()
+        snapshot.objects[copy.id] = VectorObject(shape: copy, layerIndex: layerIndex)
+        return copy.id
     }
 
     internal func applyTransformToShapeCoordinates(shape: VectorShape, transform: CGAffineTransform) -> VectorShape {
