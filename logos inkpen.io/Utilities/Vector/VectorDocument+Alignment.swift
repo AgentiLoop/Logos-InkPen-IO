@@ -48,31 +48,30 @@ extension VectorDocument {
             x: anchorBounds.minX + anchorBounds.width * anchorOrigin.point.x,
             y: anchorBounds.minY + anchorBounds.height * anchorOrigin.point.y
         )
+        func offset(of shape: VectorShape) -> (x: CGFloat, y: CGFloat) {
+            let shapeOrigin = shape.transformOrigin ?? .center
+            let shapeBounds = worldBounds(shape)
+            let dx = anchorPoint.x - (shapeBounds.minX + shapeBounds.width * shapeOrigin.point.x)
+            let dy = anchorPoint.y - (shapeBounds.minY + shapeBounds.height * shapeOrigin.point.y)
+            switch axis {
+            case .both: return (dx, dy)
+            case .xOnly: return (dx, 0)
+            case .yOnly: return (0, dy)
+            }
+        }
+        let needsMove = orderedIDs.contains { objectID in
+            guard objectID != anchorID, let shape = snapshot.objects[objectID]?.shape else { return false }
+            let o = offset(of: shape)
+            return abs(o.x) > 0.001 || abs(o.y) > 0.001
+        }
+        guard needsMove else { return }
         modifySelectedShapesWithUndo(
             preCapture: {
                 for objectID in orderedIDs where objectID != anchorID {
                     guard let obj = snapshot.objects[objectID] else { continue }
                     var shape = obj.shape
 
-                    let shapeOrigin = shape.transformOrigin ?? .center
-                    let shapeBounds = worldBounds(shape)
-                    let currentOriginPoint = CGPoint(
-                        x: shapeBounds.minX + shapeBounds.width * shapeOrigin.point.x,
-                        y: shapeBounds.minY + shapeBounds.height * shapeOrigin.point.y
-                    )
-                    let offsetX: CGFloat
-                    let offsetY: CGFloat
-                    switch axis {
-                    case .both:
-                        offsetX = anchorPoint.x - currentOriginPoint.x
-                        offsetY = anchorPoint.y - currentOriginPoint.y
-                    case .xOnly:
-                        offsetX = anchorPoint.x - currentOriginPoint.x
-                        offsetY = 0
-                    case .yOnly:
-                        offsetX = 0
-                        offsetY = anchorPoint.y - currentOriginPoint.y
-                    }
+                    let (offsetX, offsetY) = offset(of: shape)
                     guard abs(offsetX) > 0.001 || abs(offsetY) > 0.001 else { continue }
                     if shape.isGroupContainer && !shape.memberIDs.isEmpty {
                         let translationTransform = CGAffineTransform(translationX: offsetX, y: offsetY)
