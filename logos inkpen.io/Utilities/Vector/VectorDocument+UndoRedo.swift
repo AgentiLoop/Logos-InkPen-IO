@@ -46,7 +46,8 @@ extension VectorDocument {
                 newShapes[shapeID] = shape
             }
         }
-        if !objectIDs.isEmpty {
+        // Nothing changed (e.g. the value was already set): no empty undo step.
+        if objectIDs.contains(where: { oldShapes[$0] != newShapes[$0] }) {
             let command = ShapeModificationCommand(
                 objectIDs: objectIDs,
                 oldShapes: oldShapes,
@@ -100,7 +101,8 @@ extension VectorDocument {
                 newShapes[shapeID] = shape
             }
         }
-        if !objectIDs.isEmpty {
+        // Nothing changed (e.g. the value was already set): no empty undo step.
+        if objectIDs.contains(where: { oldShapes[$0] != newShapes[$0] }) {
             let command = ShapeModificationCommand(
                 objectIDs: objectIDs,
                 oldShapes: oldShapes,

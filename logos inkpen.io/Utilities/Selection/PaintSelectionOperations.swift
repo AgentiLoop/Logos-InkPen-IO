@@ -151,63 +151,37 @@ enum PaintSelectionOperations {
         document.triggerLayerUpdates(for: affectedLayers)
     }
 
+    /// The selected objects with groups replaced by their (nested) members, so a style edit on a
+    /// group reaches the shapes that are drawn.
+    private static func selectedLeafIDs(document: VectorDocument) -> [UUID] {
+        var result: [UUID] = []
+        func visit(_ id: UUID) {
+            guard let shape = document.snapshot.objects[id]?.shape else { return }
+            if shape.isGroupContainer && !shape.memberIDs.isEmpty {
+                shape.memberIDs.forEach(visit)
+            } else if !result.contains(id) {
+                result.append(id)
+            }
+        }
+        document.getActiveShapeIDs().forEach(visit)
+        return result
+    }
+
     static func updateStrokePlacement(_ placement: StrokePlacement, document: VectorDocument) {
         document.strokeDefaults.placement = placement
         let activeShapeIDs = document.getActiveShapeIDs()
         if activeShapeIDs.isEmpty { return }
-        var oldPlacements: [UUID: StrokePlacement] = [:]
-        var newPlacements: [UUID: StrokePlacement] = [:]
-        for shapeID in activeShapeIDs {
-            if let obj = document.snapshot.objects[shapeID] {
-                switch obj.objectType {
-                case .shape(let shape), .image(let shape), .warp(let shape), .group(let shape), .clipGroup(let shape), .clipMask(let shape), .guide(let shape):
-                    oldPlacements[shapeID] = shape.strokeStyle?.placement ?? .center
-                    newPlacements[shapeID] = placement
-                case .text:
-                    continue
-                }
+        document.modifySelectedShapesWithUndo(preCapture: {
+            for shapeID in activeShapeIDs {
+                document.updateShapeStrokePlacementInUnified(id: shapeID, placement: placement)
             }
-        }
-        if !oldPlacements.isEmpty {
-            let command = StrokePropertiesCommand(
-                objectIDs: Array(activeShapeIDs),
-                placement: oldPlacements,
-                new: newPlacements
-            )
-            document.executeCommand(command)
-        }
-        for shapeID in activeShapeIDs {
-            document.updateShapeStrokePlacementInUnified(id: shapeID, placement: placement)
-        }
+        })
     }
 
     static func updateStrokeLineJoin(_ lineJoin: CGLineJoin, document: VectorDocument) {
         document.strokeDefaults.lineJoin = lineJoin
-        let activeShapeIDs = document.getActiveShapeIDs()
-        if !activeShapeIDs.isEmpty {
-            var oldLineJoins: [UUID: CGLineJoin] = [:]
-            var newLineJoins: [UUID: CGLineJoin] = [:]
-            for shapeID in activeShapeIDs {
-                if let obj = document.snapshot.objects[shapeID] {
-                    switch obj.objectType {
-                    case .shape(let shape), .image(let shape), .warp(let shape), .group(let shape), .clipGroup(let shape), .clipMask(let shape), .guide(let shape):
-                        oldLineJoins[shapeID] = shape.strokeStyle?.lineJoin.cgLineJoin ?? .miter
-                        newLineJoins[shapeID] = lineJoin
-                    case .text(let shape):
-                        oldLineJoins[shapeID] = shape.typography?.strokeLineJoin.cgLineJoin ?? .round
-                        newLineJoins[shapeID] = lineJoin
-                    }
-                }
-            }
-            if !oldLineJoins.isEmpty {
-                let command = StrokePropertiesCommand(
-                    objectIDs: Array(activeShapeIDs),
-                    lineJoin: oldLineJoins,
-                    new: newLineJoins
-                )
-                document.executeCommand(command)
-            }
-            for shapeID in activeShapeIDs {
+        document.modifySelectedShapesWithUndo(preCapture: {
+            for shapeID in selectedLeafIDs(document: document) {
                 if let obj = document.snapshot.objects[shapeID] {
                     switch obj.objectType {
                     case .text:
@@ -217,39 +191,18 @@ enum PaintSelectionOperations {
                     }
                 }
             }
-        }
+        })
     }
 
     static func updateStrokeLineCap(_ lineCap: CGLineCap, document: VectorDocument) {
         document.strokeDefaults.lineCap = lineCap
-        let activeShapeIDs = document.getActiveShapeIDs()
-        if !activeShapeIDs.isEmpty {
-            var oldLineCaps: [UUID: CGLineCap] = [:]
-            var newLineCaps: [UUID: CGLineCap] = [:]
-            for shapeID in activeShapeIDs {
-                if let obj = document.snapshot.objects[shapeID] {
-                    switch obj.objectType {
-                    case .shape(let shape), .image(let shape), .warp(let shape), .group(let shape), .clipGroup(let shape), .clipMask(let shape), .guide(let shape):
-                        oldLineCaps[shapeID] = shape.strokeStyle?.lineCap.cgLineCap ?? .butt
-                        newLineCaps[shapeID] = lineCap
-                    case .text:
-                        continue
-                    }
-                }
-            }
-            if !oldLineCaps.isEmpty {
-                let command = StrokePropertiesCommand(
-                    objectIDs: Array(activeShapeIDs),
-                    lineCap: oldLineCaps,
-                    new: newLineCaps
-                )
-                document.executeCommand(command)
-            }
-            for shapeID in activeShapeIDs {
+        document.modifySelectedShapesWithUndo(preCapture: {
+            for shapeID in selectedLeafIDs(document: document) {
                 document.updateShapeStrokeLineCapInUnified(id: shapeID, lineCap: lineCap)
             }
-        }
+        })
     }
+
 
     static func updateStrokeMiterLimitDirectNoUndo(_ miterLimit: Double, document: VectorDocument) {
         for objectID in document.viewState.selectedObjectIDs {
@@ -265,33 +218,11 @@ enum PaintSelectionOperations {
 
     static func updateStrokeMiterLimit(_ miterLimit: Double, document: VectorDocument) {
         document.strokeDefaults.miterLimit = miterLimit
-        let activeShapeIDs = document.getActiveShapeIDs()
-        if !activeShapeIDs.isEmpty {
-            var oldMiterLimits: [UUID: Double] = [:]
-            var newMiterLimits: [UUID: Double] = [:]
-            for shapeID in activeShapeIDs {
-                if let obj = document.snapshot.objects[shapeID] {
-                    switch obj.objectType {
-                    case .shape(let shape), .image(let shape), .warp(let shape), .group(let shape), .clipGroup(let shape), .clipMask(let shape), .guide(let shape):
-                        oldMiterLimits[shapeID] = shape.strokeStyle?.miterLimit ?? 10.0
-                        newMiterLimits[shapeID] = miterLimit
-                    case .text:
-                        continue
-                    }
-                }
-            }
-            if !oldMiterLimits.isEmpty {
-                let command = StrokePropertiesCommand(
-                    objectIDs: Array(activeShapeIDs),
-                    miterLimit: oldMiterLimits,
-                    new: newMiterLimits
-                )
-                document.executeCommand(command)
-            }
-            for shapeID in activeShapeIDs {
+        document.modifySelectedShapesWithUndo(preCapture: {
+            for shapeID in selectedLeafIDs(document: document) {
                 document.updateShapeStrokeMiterLimitInUnified(id: shapeID, miterLimit: miterLimit)
             }
-        }
+        })
     }
 
     static func updateStrokeScaleWithTransform(_ scaleWithTransform: Bool, document: VectorDocument) {
@@ -342,39 +273,11 @@ enum PaintSelectionOperations {
     }
 
     static func applyFillToSelectedShapes(fillColor: VectorColor, fillOpacity: Double, document: VectorDocument) {
-        let activeShapeIDs = document.getActiveShapeIDs()
-        if activeShapeIDs.isEmpty { return }
-        var oldColors: [UUID: VectorColor] = [:]
-        var newColors: [UUID: VectorColor] = [:]
-        var oldOpacities: [UUID: Double] = [:]
-        var newOpacities: [UUID: Double] = [:]
-        for shapeID in activeShapeIDs {
-            if let obj = document.snapshot.objects[shapeID] {
-                switch obj.objectType {
-                case .shape(let shape), .image(let shape), .warp(let shape), .group(let shape), .clipGroup(let shape), .clipMask(let shape), .guide(let shape):
-                    oldColors[shapeID] = shape.fillStyle?.color ?? .black
-                    newColors[shapeID] = fillColor
-                    oldOpacities[shapeID] = shape.fillStyle?.opacity ?? 1.0
-                    newOpacities[shapeID] = fillOpacity
-                case .text:
-                    continue
-                }
+        document.modifySelectedShapesWithUndo(preCapture: {
+            for shapeID in selectedLeafIDs(document: document) {
+                document.createFillStyleInUnified(id: shapeID, color: fillColor, opacity: fillOpacity)
             }
-        }
-        if !oldColors.isEmpty {
-            let command = ChangeColorCommand(
-                objectIDs: Array(activeShapeIDs),
-                target: .fill,
-                oldColors: oldColors,
-                newColors: newColors,
-                oldOpacities: oldOpacities,
-                newOpacities: newOpacities
-            )
-            document.executeCommand(command)
-        }
-        for shapeID in activeShapeIDs {
-            document.createFillStyleInUnified(id: shapeID, color: fillColor, opacity: fillOpacity)
-        }
+        })
     }
 
     static func duplicateSelectedShapes(document: VectorDocument) {
