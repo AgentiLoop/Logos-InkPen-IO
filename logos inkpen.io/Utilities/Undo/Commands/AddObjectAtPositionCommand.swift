@@ -2,7 +2,8 @@ import Foundation
 import Combine
 
 class AddObjectAtPositionCommand: BaseCommand {
-    private let objectsToAdd: [UUID: VectorObject]
+    /// Back to front: objects are stacked in this order.
+    private let objectsToAdd: [VectorObject]
     private let insertPosition: InsertPosition
 
     enum InsertPosition {
@@ -13,18 +14,15 @@ class AddObjectAtPositionCommand: BaseCommand {
     }
 
     init(objects: [VectorObject], position: InsertPosition = .back) {
-        var dict: [UUID: VectorObject] = [:]
-        for obj in objects {
-            dict[obj.id] = obj
-        }
-        self.objectsToAdd = dict
+        self.objectsToAdd = objects
         self.insertPosition = position
     }
 
     override func execute(on document: VectorDocument) {
         var affectedLayers = Set<Int>()
         var objectsByLayer: [Int: [(UUID, VectorObject)]] = [:]
-        for (uuid, obj) in objectsToAdd {
+        for obj in objectsToAdd {
+            let uuid = obj.id
             objectsByLayer[obj.layerIndex, default: []].append((uuid, obj))
         }
         for (layerIndex, layerObjects) in objectsByLayer {
@@ -70,7 +68,8 @@ class AddObjectAtPositionCommand: BaseCommand {
 
     override func undo(on document: VectorDocument) {
         var affectedLayers = Set<Int>()
-        for (uuid, obj) in objectsToAdd {
+        for obj in objectsToAdd {
+            let uuid = obj.id
             document.snapshot.objects.removeValue(forKey: uuid)
             let layerIndex = obj.layerIndex
             if layerIndex >= 0 && layerIndex < document.snapshot.layers.count {

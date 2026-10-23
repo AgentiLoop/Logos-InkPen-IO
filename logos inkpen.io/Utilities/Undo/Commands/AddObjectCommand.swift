@@ -1,14 +1,11 @@
 import Foundation
 
 class AddObjectCommand: BaseCommand {
-    private let objectsToAdd: [UUID: VectorObject]
+    /// Back to front: objects are stacked in this order.
+    private let objectsToAdd: [VectorObject]
 
     init(objects: [VectorObject]) {
-        var dict: [UUID: VectorObject] = [:]
-        for obj in objects {
-            dict[obj.id] = obj
-        }
-        self.objectsToAdd = dict
+        self.objectsToAdd = objects
     }
 
     convenience init(object: VectorObject) {
@@ -17,7 +14,8 @@ class AddObjectCommand: BaseCommand {
 
     override func execute(on document: VectorDocument) {
         var affectedLayers = Set<Int>()
-        for (uuid, obj) in objectsToAdd {
+        for obj in objectsToAdd {
+            let uuid = obj.id
             let layerIndex = obj.layerIndex
             if layerIndex >= 0 && layerIndex < document.snapshot.layers.count {
                 document.snapshot.objects[uuid] = obj
@@ -32,7 +30,8 @@ class AddObjectCommand: BaseCommand {
 
     override func undo(on document: VectorDocument) {
         var affectedLayers = Set<Int>()
-        for (uuid, obj) in objectsToAdd {
+        for obj in objectsToAdd {
+            let uuid = obj.id
             document.snapshot.objects.removeValue(forKey: uuid)
             let layerIndex = obj.layerIndex
             if layerIndex >= 0 && layerIndex < document.snapshot.layers.count {

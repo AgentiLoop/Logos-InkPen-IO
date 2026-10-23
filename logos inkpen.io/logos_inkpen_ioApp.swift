@@ -893,7 +893,13 @@ class ClipboardManager {
         var shapesToCopy: [VectorShape] = []
         var copiedShapeIDs: Set<UUID> = []
         var textToCopy: [VectorText] = []
-        for objectID in document.viewState.selectedObjectIDs {
+        // Copy back to front so the pasted objects keep the originals' stacking order.
+        let stackOrder = document.snapshot.layers.flatMap(\.objectIDs)
+        let stackIndex = Dictionary(stackOrder.enumerated().map { ($1, $0) }, uniquingKeysWith: { first, _ in first })
+        let selectedInStackOrder = document.viewState.selectedObjectIDs.sorted {
+            (stackIndex[$0] ?? Int.max, $0.uuidString) < (stackIndex[$1] ?? Int.max, $1.uuidString)
+        }
+        for objectID in selectedInStackOrder {
             if let vectorObject = document.findObject(by: objectID) {
                 switch vectorObject.objectType {
                 case .text(let shape):
