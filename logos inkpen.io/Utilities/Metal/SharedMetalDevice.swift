@@ -32,6 +32,5 @@ final class SharedMetalDevice {
         PDFMetalProcessor.releaseShared()
         MetalImageTileRenderer.releaseShared()
         GPUCoordinateTransform.releaseShared()
-        MetalSpatialIndex.releaseSharedPipelines()
     }
 }

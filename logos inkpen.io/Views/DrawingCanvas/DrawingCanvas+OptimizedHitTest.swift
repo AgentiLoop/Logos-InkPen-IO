@@ -101,7 +101,9 @@ extension DrawingCanvas {
     }
 
     private func metalHitTest(at point: CGPoint, testFunction: (VectorObject, CGPoint) -> Bool) -> VectorObject? {
-        let candidates = spatialIndex.candidateObjectIDs(at: point)
+        // Guides hit within 5 pt (performShapeHitTest), paths within the zoom-scaled tolerance.
+        let tolerance = max(HitTestMath.canvasTolerance(zoom: CGFloat(zoomLevel)), 5.0)
+        let candidates = spatialIndex.candidateObjectIDs(at: point, tolerance: tolerance)
         for layer in document.snapshot.layers.reversed() {
             guard layer.isVisible else { continue }
             for objectID in layer.objectIDs.reversed() {
