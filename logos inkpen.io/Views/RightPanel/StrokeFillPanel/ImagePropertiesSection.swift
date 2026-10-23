@@ -3,6 +3,7 @@ import SwiftUI
 struct ImagePropertiesSection: View {
     let imageOpacity: Double
     let onUpdateImageOpacity: (Double) -> Void
+    let onImageOpacityEditingChanged: (Bool) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -27,7 +28,7 @@ struct ImagePropertiesSection: View {
                 Slider(value: Binding(
                     get: { imageOpacity },
                     set: { onUpdateImageOpacity($0) }
-                ), in: 0...1)
+                ), in: 0...1, onEditingChanged: onImageOpacityEditingChanged)
                 .controlSize(.regular)
                 .help("Adjust image opacity (0-100%)")
             }

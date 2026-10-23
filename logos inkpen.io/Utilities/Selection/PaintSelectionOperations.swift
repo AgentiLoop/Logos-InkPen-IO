@@ -237,39 +237,41 @@ enum PaintSelectionOperations {
         }
     }
 
-    static func updateImageOpacity(_ opacity: Double, document: VectorDocument) {
-        guard let layerIndex = document.selectedLayerIndex else { return }
-        var oldOpacities: [UUID: Double] = [:]
-        var newOpacities: [UUID: Double] = [:]
-        for shapeID in document.viewState.selectedObjectIDs {
-            if let obj = document.snapshot.objects[shapeID] {
-                switch obj.objectType {
-                case .shape(let shape), .image(let shape), .warp(let shape), .group(let shape), .clipGroup(let shape), .clipMask(let shape), .guide(let shape):
-                    oldOpacities[shapeID] = shape.opacity
-                    newOpacities[shapeID] = opacity
-                case .text:
-                    continue
-                }
+    /// Opacity of each selected image (the Image Properties slider's targets). Other selected
+    /// objects are left out so the image slider never changes them.
+    static func selectedImageOpacities(document: VectorDocument) -> [UUID: Double] {
+        var result: [UUID: Double] = [:]
+        for objectID in document.viewState.selectedObjectIDs {
+            guard let obj = document.snapshot.objects[objectID] else { continue }
+            if case .text = obj.objectType { continue }
+            let shape = obj.shape
+            if ImageContentRegistry.containsImage(shape, in: document) || shape.linkedImagePath != nil || shape.embeddedImageData != nil {
+                result[objectID] = shape.opacity
             }
         }
-        if !oldOpacities.isEmpty {
-            let command = StrokePropertiesCommand(
-                objectIDs: Array(document.viewState.selectedObjectIDs),
-                imageOpacity: oldOpacities,
-                new: newOpacities
-            )
-            document.executeCommand(command)
-        }
-        for shapeID in document.viewState.selectedObjectIDs {
-            let shapes = document.getShapesForLayer(layerIndex)
-            if let shapeIndex = shapes.firstIndex(where: { $0.id == shapeID }),
+        return result
+    }
 
-               let shape = document.getShapeAtIndex(layerIndex: layerIndex, shapeIndex: shapeIndex) {
-                if ImageContentRegistry.containsImage(shape, in: document) || shape.linkedImagePath != nil || shape.embeddedImageData != nil {
-                    document.updateShapeOpacityInUnified(id: shape.id, opacity: opacity)
-                }
-            }
+    /// Shows a slider value on the selected images while dragging, without an undo step.
+    static func updateImageOpacityLive(_ opacity: Double, document: VectorDocument) {
+        for id in selectedImageOpacities(document: document).keys {
+            document.updateShapeOpacityInUnified(id: id, opacity: opacity)
         }
+    }
+
+    /// Ends a slider drag: one undo step from the opacities captured when it began (`start`)
+    /// to `opacity`, or none if nothing changed.
+    static func commitImageOpacity(_ opacity: Double, from start: [UUID: Double], document: VectorDocument) {
+        let ids = Array(start.keys)
+        for id in ids {
+            document.updateShapeOpacityInUnified(id: id, opacity: start[id] ?? opacity)
+        }
+        guard ids.contains(where: { start[$0] != opacity }) else { return }
+        document.modifyShapesWithUndo(shapeIDs: ids) { $0.opacity = opacity }
+    }
+
+    static func updateImageOpacity(_ opacity: Double, document: VectorDocument) {
+        commitImageOpacity(opacity, from: selectedImageOpacities(document: document), document: document)
     }
 
     static func applyFillToSelectedShapes(fillColor: VectorColor, fillOpacity: Double, document: VectorDocument) {

@@ -61,6 +61,8 @@ struct StrokeFillPanel: View {
     @State private var strokePlacementState: StrokePlacement = .center
     @State private var strokeMiterLimitState: Double = 10.0
     @State private var selectedImageOpacityState: Double = 1.0
+    /// Image opacities when the Image Properties slider drag began; nil when not dragging.
+    @State private var imageOpacityDragStart: [UUID: Double]?
     @State private var isDragging: Bool = false
     private var currentAnchorType: AnchorPointType {
         var detectedTypes = Set<AnchorPointType>()
@@ -779,7 +781,19 @@ struct StrokeFillPanel: View {
                             imageOpacity: selectedImageOpacityState,
                             onUpdateImageOpacity: { value in
                                 selectedImageOpacityState = value
-                                updateImageOpacity(value)
+                                if imageOpacityDragStart != nil {
+                                    PaintSelectionOperations.updateImageOpacityLive(value, document: document)
+                                } else {
+                                    updateImageOpacity(value)
+                                }
+                            },
+                            onImageOpacityEditingChanged: { isEditing in
+                                if isEditing {
+                                    imageOpacityDragStart = PaintSelectionOperations.selectedImageOpacities(document: document)
+                                } else if let start = imageOpacityDragStart {
+                                    imageOpacityDragStart = nil
+                                    PaintSelectionOperations.commitImageOpacity(selectedImageOpacityState, from: start, document: document)
+                                }
                             }
                         )
                     }
