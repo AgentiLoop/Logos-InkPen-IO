@@ -664,34 +664,15 @@ class SVGParser: NSObject, XMLParserDelegate {
         }
         useRecursionDepth += 1
         if let symbolShapes = symbolDefinitions[refId] {
-            for shape in symbolShapes {
-                var instance = shape
-                instance.id = UUID()
-                if !currentTransform.isIdentity {
-                    let useTransform = CGAffineTransform(translationX: useX, y: useY)
-
-                    var combined = useTransform
-                    if let userTransform = attributes["transform"].map(parseTransform) {
-                        combined = combined.concatenating(userTransform)
-                    }
-                    let transformedElements = instance.path.elements.map { el -> PathElement in
-                        switch el {
-                        case .move(let to): return .move(to: VectorPoint(to.cgPoint.applying(combined)))
-                        case .line(let to): return .line(to: VectorPoint(to.cgPoint.applying(combined)))
-                        case .curve(let to, let c1, let c2):
-                            return .curve(to: VectorPoint(to.cgPoint.applying(combined)),
-                                         control1: VectorPoint(c1.cgPoint.applying(combined)),
-                                         control2: VectorPoint(c2.cgPoint.applying(combined)))
-                        case .quadCurve(let to, let c):
-                            return .quadCurve(to: VectorPoint(to.cgPoint.applying(combined)),
-                                             control: VectorPoint(c.cgPoint.applying(combined)))
-                        case .close: return .close
-                        }
-                    }
-                    instance.path = VectorPath(elements: transformedElements, isClosed: instance.path.isClosed, fillRule: instance.path.fillRule.cgPathFillRule)
+            var placement: CGAffineTransform? = nil
+            if !currentTransform.isIdentity {
+                var combined = CGAffineTransform(translationX: useX, y: useY)
+                if let userTransform = attributes["transform"].map(parseTransform) {
+                    combined = combined.concatenating(userTransform)
                 }
-                shapes.append(instance)
+                placement = combined
             }
+            shapes.append(contentsOf: Self.instantiate(symbolShapes, applying: placement))
         } else if let def = elementDefinitions[refId] {
             var mergedAttributes = def.attributes
             for (key, value) in attributes where key != "xlink:href" && key != "href" && key != "id" && key != "x" && key != "y" {
@@ -710,6 +691,50 @@ class SVGParser: NSObject, XMLParserDelegate {
         }
         useRecursionDepth -= 1
         currentTransform = savedTransform
+    }
+
+    /// Copies of definition shapes (a `<symbol>` or pattern) with fresh IDs all the way down,
+    /// optionally moved by `transform`. Every instance used to share its group children's IDs
+    /// with the other instances, so editing one imported object changed another.
+    static func instantiate(_ definition: [VectorShape], applying transform: CGAffineTransform? = nil) -> [VectorShape] {
+        var idMap: [UUID: UUID] = [:]
+        func fresh(_ old: UUID) -> UUID {
+            if let mapped = idMap[old] { return mapped }
+            let new = UUID()
+            idMap[old] = new
+            return new
+        }
+        func copy(_ shape: VectorShape) -> VectorShape {
+            var instance = shape
+            instance.id = fresh(shape.id)
+            instance.memberIDs = shape.memberIDs.map(fresh)
+            instance.clippedByShapeID = shape.clippedByShapeID.map(fresh)
+            instance.groupedShapes = shape.groupedShapes.map(copy)
+            if let transform {
+                let elements = shape.path.elements.map { el -> PathElement in
+                    switch el {
+                    case .move(let to): return .move(to: VectorPoint(to.cgPoint.applying(transform)))
+                    case .line(let to): return .line(to: VectorPoint(to.cgPoint.applying(transform)))
+                    case .curve(let to, let c1, let c2):
+                        return .curve(to: VectorPoint(to.cgPoint.applying(transform)),
+                                      control1: VectorPoint(c1.cgPoint.applying(transform)),
+                                      control2: VectorPoint(c2.cgPoint.applying(transform)))
+                    case .quadCurve(let to, let c):
+                        return .quadCurve(to: VectorPoint(to.cgPoint.applying(transform)),
+                                          control: VectorPoint(c.cgPoint.applying(transform)))
+                    case .close: return .close
+                    }
+                }
+                instance.path = VectorPath(elements: elements, isClosed: shape.path.isClosed, fillRule: shape.path.fillRule.cgPathFillRule)
+                if shape.isGroup {
+                    instance.bounds = shape.bounds.applying(transform)
+                } else {
+                    instance.updateBounds()
+                }
+            }
+            return instance
+        }
+        return definition.map(copy)
     }
 
     private func parsePath(attributes: [String: String]) {
@@ -777,9 +802,7 @@ class SVGParser: NSObject, XMLParserDelegate {
         }
         guard minX.isFinite, minY.isFinite else { return }
         let translate = CGAffineTransform(translationX: minX, y: minY)
-        for src in patternShapes {
-            var copy = src
-            copy.id = UUID()
+        for var copy in Self.instantiate(patternShapes) {
             copy.transform = copy.transform.concatenating(translate)
             shapes.append(copy)
         }
