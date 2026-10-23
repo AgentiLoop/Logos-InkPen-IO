@@ -165,7 +165,7 @@ log("Fixture: \(svgURL.path)")
 
 let config = NSWorkspace.OpenConfiguration()
 config.arguments = ["-InkPenAutomation", "YES", "-defaultTool", "Selection",
-                    "-ApplePersistenceIgnoreState", "YES"]
+                    "-ApplePersistenceIgnoreState", "YES", "-AppleWindowTabbingMode", "always"]
 config.createsNewApplicationInstance = true
 config.activates = true
 var launched: NSRunningApplication?
@@ -329,4 +329,134 @@ if let reopened = s2, let o = object(near: expectedOrange, in: reopened), let sc
     check(false, "orange found after reopen for the close test")
 }
 
+// 8. Tabs: move a document's tab to its own window and merge it back — the document must keep
+// its objects and undo (DocumentBasedMainView only wipes a document after it is really closed),
+// and saving afterwards must write the full drawing, not an empty one.
+log("\n[tabs] open two documents as tabs, Move Tab to New Window, Merge All Windows")
+let secondURL = workDir.appendingPathComponent("e2e-second.svg")
+try! """
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <circle cx="200" cy="150" r="60" fill="red"/>
+  <rect x="20" y="20" width="60" height="40" fill="purple"/>
+</svg>
+""".write(to: secondURL, atomically: true, encoding: .utf8)
+func openDoc(_ url: URL) {
+    NSWorkspace.shared.open([url], withApplicationAt: appURL, configuration: {
+        let c = NSWorkspace.OpenConfiguration(); c.activates = true; return c
+    }()) { _, _ in }
+}
+func secondWindow() -> AXUIElement? { windows(app).first { title($0).contains("e2e-second") } }
+func secondState() -> State? { secondWindow().flatMap(probe(in:)).flatMap(readState) }
+func menuItem(_ menu: String, _ item: String) -> AXUIElement? {
+    guard let bar = attr(app, kAXMenuBarAttribute) else { return nil }
+    let barEl = bar as! AXUIElement
+    guard let top = children(barEl).first(where: { title($0) == menu }) else { return nil }
+    return findFirst(top) { (attr($0, kAXRoleAttribute) as? String) == kAXMenuItemRole && title($0) == item }
+}
+func pressMenu(_ menu: String, _ item: String) -> Bool {
+    front()
+    guard let mi = menuItem(menu, item) else { return false }
+    let enabled = (attr(mi, kAXEnabledAttribute) as? Bool) ?? false
+    return enabled && AXUIElementPerformAction(mi, kAXPressAction as CFString) == .success
+}
+func sameFrame(_ a: AXUIElement, _ b: AXUIElement) -> Bool {
+    func frame(_ w: AXUIElement) -> CGRect? {
+        guard let pv = attr(w, kAXPositionAttribute), let sv = attr(w, kAXSizeAttribute) else { return nil }
+        var p = CGPoint.zero, s = CGSize.zero
+        AXValueGetValue(pv as! AXValue, .cgPoint, &p); AXValueGetValue(sv as! AXValue, .cgSize, &s)
+        return CGRect(origin: p, size: s)
+    }
+    guard let fa = frame(a), let fb = frame(b) else { return false }
+    return near(fa, fb, 2)
+}
+
+openDoc(secondURL)
+var sec0: State?
+check(waitFor(20) { sec0 = secondState(); return sec0.map { !$0.objects.isEmpty } ?? false }, "second document opens with a probe")
+openDoc(svgURL)
+var t0: State?
+check(waitFor(20) { t0 = state(); return t0.map { !$0.objects.isEmpty } ?? false }, "fixture reopened next to the second document")
+let tabbedTogether: Bool = {
+    guard let f = fixtureWindow() else { return false }
+    // A background tab is either absent from AXWindows or shares the frame of the selected tab.
+    return secondWindow().map { sameFrame($0, f) } ?? true
+}()
+check(tabbedTogether, "both documents are tabs of one window (windows: \(windows(app).map(title)))")
+
+if let t0, let o = object(near: expectedOrange, in: t0) {
+    let count0 = t0.objects.count
+    check(pressMenu("Window", "Move Tab to New Window"), "Window ▸ Move Tab to New Window is enabled and pressed")
+    // A background tab is not listed in AXWindows; after the move both documents are.
+    check(waitFor(5) { fixtureWindow() != nil && secondWindow() != nil },
+          "fixture and second document are now in separate windows (windows: \(windows(app).map(title)))")
+    pause(1.5) // longer than DocumentBasedMainView's deferred wipe
+    let moved = state()
+    check(moved?.objects.count == count0, "moved tab keeps all \(count0) objects (got \(moved?.objects.count ?? -1))")
+    // The window left behind is on screen, so it must show its document (not a blank
+    // suspended-tab placeholder) without being clicked first.
+    var sec1: State?
+    check(waitFor(3) { sec1 = secondState(); return sec1 != nil },
+          "window left behind shows its document without being clicked (probe present)")
+    check(sec1?.objects.count == sec0?.objects.count,
+          "other document keeps all its objects after the tab move (\(sec0?.objects.count ?? -1) → \(sec1?.objects.count ?? -1))")
+    check(moved?.obj(o.id).map { near($0.bounds, o.bounds, 0.01) } ?? false, "moved tab: orange unchanged by the move")
+
+    // Edit + undo still work in the moved window.
+    if let sc = moved?.obj(o.id)?.screen {
+        let edits = moved?.editSteps ?? 0
+        front()
+        drag(from: CGPoint(x: sc.midX, y: sc.midY), by: CGVector(dx: 40, dy: 40))
+        check(waitFor(3) { (state()?.editSteps ?? 0) > edits && !(state()?.obj(o.id).map { near($0.bounds, o.bounds, 0.5) } ?? true) },
+              "drag works in the moved window")
+        front()
+        key(kZ, .maskCommand)
+        check(waitFor(3) { state()?.obj(o.id).map { near($0.bounds, o.bounds, 0.01) } ?? false }, "⌘Z works in the moved window")
+        check(secondState()?.objects.count == sec0?.objects.count,
+              "the other window still shows its document while the fixture window is in front")
+    } else {
+        check(false, "orange has a screen rect in the moved window")
+    }
+
+    check(pressMenu("Window", "Merge All Windows"), "Window ▸ Merge All Windows is enabled and pressed")
+    check(waitFor(5) {
+        guard let f = fixtureWindow() else { return false }
+        return secondWindow().map { sameFrame($0, f) } ?? true
+    }, "windows merged back into tabs (windows: \(windows(app).map(title)))")
+    pause(1.5)
+    let merged = state()
+    check(merged?.objects.count == count0, "after merge the fixture keeps all \(count0) objects (got \(merged?.objects.count ?? -1))")
+
+    // Save after the move/merge must write the full drawing.
+    var dragged: CGRect?
+    if let sc = merged?.obj(o.id)?.screen {
+        front()
+        drag(from: CGPoint(x: sc.midX, y: sc.midY), by: CGVector(dx: -60, dy: 30))
+        dragged = state()?.obj(o.id)?.bounds
+        check(dragged.map { !near($0, o.bounds, 0.5) } ?? false, "drag works after the merge")
+    } else {
+        check(false, "orange has a screen rect after the merge")
+    }
+    let mtime1 = (try? FileManager.default.attributesOfItem(atPath: svgURL.path)[.modificationDate] as? Date) ?? nil
+    front()
+    key(kS, .maskCommand)
+    check(waitFor(5) {
+        let m = (try? FileManager.default.attributesOfItem(atPath: svgURL.path)[.modificationDate] as? Date) ?? nil
+        return m != nil && m != mtime1
+    }, "⌘S after move/merge wrote the file")
+    pause(0.5)
+    front()
+    key(kW, .maskCommand)
+    check(waitFor(5) { fixtureWindow() == nil }, "⌘W closes the saved fixture")
+    openDoc(svgURL)
+    var r: State?
+    check(waitFor(20) { r = state(); return r.map { !$0.objects.isEmpty } ?? false }, "fixture reopens after move/merge/save")
+    if let r {
+        check(r.objects.count == count0, "saved file has all \(count0) objects (got \(r.objects.count))\n\(describe(r))")
+        if let dragged { check(object(near: dragged, in: r) != nil, "orange saved at its dragged position \(dragged)") }
+    }
+} else {
+    check(false, "orange found when reopening for the tab test")
+}
+
 finish()
+

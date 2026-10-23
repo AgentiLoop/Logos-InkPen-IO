@@ -82,9 +82,15 @@ struct DocumentBasedMainView: View {
                 }
                 AppEventMonitor.shared.setActiveDocument(document)
             } else if window.tabbingIdentifier == vw.tabbingIdentifier {
-                if isTabActive {
+                // Only a hidden tab may be suspended. A separate window (e.g. the one left
+                // behind by "Move Tab to New Window") is still on screen and must keep its content.
+                let isHiddenTab = vw.tabGroup.map { $0.selectedWindow !== vw } ?? false
+                if isHiddenTab && isTabActive {
                     isTabActive = false
                     MemoryDiag.checkpoint("Tab SUSPENDED")
+                } else if !isHiddenTab && !isTabActive {
+                    isTabActive = true
+                    MemoryDiag.checkpoint("Tab RESUMED (visible window)")
                 }
             }
         }
