@@ -75,7 +75,7 @@ extension VectorDocument {
         let command = GroupCommand(
             operation: .flatten,
             layerIndex: layerIndex,
-            removedObjectIDs: Array(viewState.selectedObjectIDs),
+            removedObjectIDs: selectedShapes.map { $0.id },
             removedShapes: removedShapes,
             addedObjectIDs: [flattenedShape.id],
             addedShapes: [flattenedShape.id: flattenedShape],
@@ -172,7 +172,7 @@ extension VectorDocument {
             layerIndex: layerIndex,
             removedObjectIDs: [selectedShapeID],
             removedShapes: removedShapes,
-            addedObjectIDs: Array(newSelectedIDs),
+            addedObjectIDs: shapesToAdd.map { $0.id },
             addedShapes: addedShapes,
             oldSelectedObjectIDs: viewState.selectedObjectIDs,
             newSelectedObjectIDs: newSelectedIDs
@@ -217,7 +217,7 @@ extension VectorDocument {
         let command = GroupCommand(
             operation: .makeCompound,
             layerIndex: layerIndex,
-            removedObjectIDs: Array(viewState.selectedObjectIDs),
+            removedObjectIDs: selectedShapes.map { $0.id },
             removedShapes: removedShapes,
             addedObjectIDs: [compoundShape.id],
             addedShapes: [compoundShape.id: compoundShape],
@@ -265,7 +265,7 @@ extension VectorDocument {
         let command = GroupCommand(
             operation: .makeLooping,
             layerIndex: layerIndex,
-            removedObjectIDs: Array(viewState.selectedObjectIDs),
+            removedObjectIDs: selectedShapes.map { $0.id },
             removedShapes: removedShapes,
             addedObjectIDs: [loopingShape.id],
             addedShapes: [loopingShape.id: loopingShape],
@@ -314,7 +314,7 @@ extension VectorDocument {
             layerIndex: layerIndex,
             removedObjectIDs: [selectedShapeID],
             removedShapes: removedShapes,
-            addedObjectIDs: Array(newSelectedIDs),
+            addedObjectIDs: newShapes.map { $0.id },
             addedShapes: addedShapes,
             oldSelectedObjectIDs: viewState.selectedObjectIDs,
             newSelectedObjectIDs: newSelectedIDs
@@ -360,7 +360,7 @@ extension VectorDocument {
             layerIndex: layerIndex,
             removedObjectIDs: [selectedShapeID],
             removedShapes: removedShapes,
-            addedObjectIDs: Array(newSelectedIDs),
+            addedObjectIDs: newShapes.map { $0.id },
             addedShapes: addedShapes,
             oldSelectedObjectIDs: viewState.selectedObjectIDs,
             newSelectedObjectIDs: newSelectedIDs
