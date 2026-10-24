@@ -149,4 +149,35 @@ final class SVGGradientRoundTripTests: XCTestCase {
         XCTAssertEqual(r1.radius, 0.25, accuracy: 1e-6)
         assertEqual(r1.focalPoint, r0.focalPoint, "Focal offset")
     }
+
+    func testRotatedStretchedRadialGradientKeepsAngleAndScale() throws {
+        let (before, after, svg) = try roundTrip(defs: """
+        <radialGradient id="g" cx="0.5" cy="0.5" r="0.4" gradientTransform="translate(0.1 0.2) rotate(30) scale(1 0.5)">\
+        <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
+        """)
+        let r0 = try radial(before), r1 = try radial(after)
+        XCTAssertEqual(r0.angle, 30, accuracy: 1e-6)
+        XCTAssertEqual(r0.scaleY, 0.5, accuracy: 1e-6)
+        XCTAssertTrue(svg.contains("gradientTransform="), "Rotation and stretch are written")
+        XCTAssertEqual(r1.angle, r0.angle, accuracy: 1e-6, "Angle")
+        XCTAssertEqual(r1.scaleX, r0.scaleX, accuracy: 1e-6, "Scale X")
+        XCTAssertEqual(r1.scaleY, r0.scaleY, accuracy: 1e-6, "Scale Y")
+        XCTAssertEqual(r1.radius, r0.radius, accuracy: 1e-6, "Radius")
+        assertEqual(r1.originPoint, r0.originPoint, "Center")
+    }
+
+    func testTransformedRadialFocalOffsetStaysInGradientSpace() throws {
+        let (before, after, _) = try roundTrip(defs: """
+        <radialGradient id="g" cx="0.5" cy="0.5" fx="0.6" fy="0.5" r="0.5" gradientTransform="rotate(90 0.5 0.5)">\
+        <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
+        """)
+        let r0 = try radial(before), r1 = try radial(after)
+        // The canvas applies the gradient's rotation to the focal offset, so it is stored unrotated.
+        assertEqual(r0.focalPoint, CGPoint(x: 0.1, y: 0), "Imported focal offset")
+        assertEqual(r0.originPoint, CGPoint(x: 0.5, y: 0.5))
+        XCTAssertEqual(r0.angle, 90, accuracy: 1e-6)
+        assertEqual(r1.focalPoint, r0.focalPoint, "Focal offset after round trip")
+        XCTAssertEqual(r1.angle, 90, accuracy: 1e-6)
+        assertEqual(r1.originPoint, r0.originPoint, "Center")
+    }
 }

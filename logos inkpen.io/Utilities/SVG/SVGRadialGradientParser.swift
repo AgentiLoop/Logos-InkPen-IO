@@ -122,9 +122,9 @@ extension SVGParser {
         let decompScaleY = sqrt(gradTransform.c * gradTransform.c + gradTransform.d * gradTransform.d)
         let decompAngleDeg = atan2(gradTransform.b, gradTransform.a) * 180.0 / .pi
         let transformedCenter = centerPoint.applying(gradTransform)
-        let transformedFocal = focalPoint.applying(gradTransform)
-        let focalDx = transformedFocal.x - transformedCenter.x
-        let focalDy = transformedFocal.y - transformedCenter.y
+        // The canvas draws the focal offset inside the rotate/scale space, so keep it untransformed.
+        let focalDx = focalPoint.x - centerPoint.x
+        let focalDy = focalPoint.y - centerPoint.y
         let resolvedFocal: CGPoint? = (abs(focalDx) < 1e-9 && abs(focalDy) < 1e-9) ? nil : CGPoint(x: focalDx, y: focalDy)
 
         var radialGradient = RadialGradient(

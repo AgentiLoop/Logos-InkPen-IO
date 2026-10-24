@@ -863,6 +863,17 @@ class SVGExporter {
             if let focal = gradient.focalPoint, focal != center {
                 svg += " fx=\"\(focal.x * userScale)\" fy=\"\(focal.y * userScale)\""
             }
+        } else if gradient.angle != 0 || gradient.scaleX != 1 || gradient.scaleY != 1 {
+            // Rotated / stretched: the canvas draws the circle around the origin point in a
+            // rotate(angle) scale(scaleX scaleY) space, with the focal offset in that space.
+            let angle = gradient.angle * .pi / 180
+            let a = gradient.scaleX * cos(angle), b = gradient.scaleX * sin(angle)
+            let c = -gradient.scaleY * sin(angle), d = gradient.scaleY * cos(angle)
+            svg += " cx=\"0%\" cy=\"0%\" r=\"\(gradient.radius * 100)%\""
+            if let offset = gradient.focalPoint, offset != .zero {
+                svg += " fx=\"\(offset.x * 100)%\" fy=\"\(offset.y * 100)%\""
+            }
+            svg += " gradientTransform=\"matrix(\(a) \(b) \(c) \(d) \(gradient.originPoint.x) \(gradient.originPoint.y))\""
         } else {
             // The canvas centres a bounding-box radial gradient on its origin point; its focal
             // point is stored as an offset from that centre.
