@@ -286,7 +286,7 @@ class DocumentState: ObservableObject {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.title = "Import"
-        panel.begin { response in
+        panel.begin { [weak self] response in
             guard response == .OK, let url = panel.urls.first else { return }
             Task { [weak self] in
                 let result = await VectorImportManager.shared.importVectorFile(from: url)
