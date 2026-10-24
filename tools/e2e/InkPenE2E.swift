@@ -458,5 +458,129 @@ if let t0, let o = object(near: expectedOrange, in: t0) {
     check(false, "orange found when reopening for the tab test")
 }
 
+// 9. Tools: draw with the Rectangle and Ellipse tools, nudge with the arrow keys, copy/paste,
+// delete — each through the real menus/shortcuts, each undoable, none touching other objects.
+log("\n[tools] draw rectangle + ellipse, arrow-key nudge, ⌘C/⌘V, Delete, each with ⌘Z")
+let kV: CGKeyCode = 9, kC: CGKeyCode = 8, kA: CGKeyCode = 0
+let kDelete: CGKeyCode = 51, kRight: CGKeyCode = 124, kDown: CGKeyCode = 125
+func click(_ p: CGPoint) {
+    mouse(.mouseMoved, p); pause(0.2)
+    mouse(.leftMouseDown, p); pause(0.1)
+    mouse(.leftMouseUp, p); pause(0.6)
+}
+/// Canvas point → CG screen point, derived from any object the probe reports on screen.
+func screenPoint(_ c: CGPoint, _ s: State) -> CGPoint? {
+    guard let o = s.objects.first(where: { $0.screen != nil && $0.bounds.width > 1 && $0.bounds.height > 1 }),
+          let sc = o.screen else { return nil }
+    return CGPoint(x: sc.minX + (c.x - o.bounds.minX) * s.zoom, y: sc.minY + (c.y - o.bounds.minY) * s.zoom)
+}
+func unchanged(_ before: State, _ after: State, except skip: Set<String>) -> Bool {
+    before.objects.allSatisfy { o in skip.contains(o.id) || (after.obj(o.id).map { near($0.bounds, o.bounds, 0.01) } ?? false) }
+}
+/// Draws `canvasRect` with `tool` (selected via the Tools menu) and returns the new top-level object.
+func draw(_ tool: String, menuItem item: String, _ canvasRect: CGRect) -> Obj? {
+    guard let before = state(), let p0 = screenPoint(canvasRect.origin, before) else {
+        check(false, "\(tool): canvas → screen mapping"); return nil
+    }
+    check(pressMenu("Tools", item), "Tools ▸ \(item) pressed")
+    check(waitFor(3) { state()?.tool == tool }, "\(tool) tool active (got \(state()?.tool ?? "nil"))")
+    front()
+    drag(from: p0, by: CGVector(dx: canvasRect.width * before.zoom, dy: canvasRect.height * before.zoom))
+    var after: State?
+    _ = waitFor(3) { after = state(); return (after?.objects.count ?? 0) > before.objects.count }
+    guard let after else { check(false, "\(tool): state after drawing"); return nil }
+    let added = after.objects.filter { before.obj($0.id) == nil }
+    check(added.count == 1, "\(tool) drag added exactly one object (added \(added.count))")
+    guard let new = added.first else { return nil }
+    check(near(new.bounds, canvasRect, max(3, 6 / before.zoom)), "\(tool) drawn at \(canvasRect) (got \(new.bounds))")
+    check(after.editSteps == before.editSteps + 1, "\(tool) drawing is one edit undo step (\(after.undoStack))")
+    check(unchanged(before, after, except: []), "\(tool) drawing left every other object untouched")
+    front()
+    key(kZ, .maskCommand)
+    check(waitFor(3) { state().map { $0.obj(new.id) == nil && $0.objects.count == before.objects.count } ?? false },
+          "⌘Z removes the drawn \(tool)")
+    front()
+    key(kZ, [.maskCommand, .maskShift])
+    check(waitFor(3) { state()?.obj(new.id).map { near($0.bounds, new.bounds, 0.01) } ?? false },
+          "⇧⌘Z brings the drawn \(tool) back")
+    return new
+}
+
+tools: do {
+    guard state() != nil else { check(false, "fixture open for the tools test"); break tools }
+    // Empty canvas area below-right of the fixture's shapes.
+    guard let rectObj = draw("Rectangle", menuItem: "Rectangle Tool", CGRect(x: 560, y: 420, width: 120, height: 70)) else { break tools }
+    _ = draw("Ellipse", menuItem: "Ellipse Tool", CGRect(x: 420, y: 470, width: 90, height: 60))
+
+    // Back to Selection with its single-key shortcut, select the rectangle by clicking it.
+    front()
+    key(kA)
+    check(waitFor(3) { state()?.tool == "Selection" }, "A switches to the Selection tool (got \(state()?.tool ?? "nil"))")
+    guard let s1 = state(), let rc = s1.obj(rectObj.id)?.screen else { check(false, "drawn rectangle on screen"); break tools }
+    front()
+    click(CGPoint(x: rc.midX, y: rc.midY))
+    check(waitFor(3) { state()?.selected == [rectObj.id] }, "clicking the drawn rectangle selects only it (selected \(state()?.selected ?? []))")
+
+    // Arrow-key nudge.
+    guard let s2 = state(), let r2 = s2.obj(rectObj.id) else { break tools }
+    front()
+    key(kRight); key(kDown)
+    var s3: State?
+    _ = waitFor(3) { s3 = state(); return s3?.obj(rectObj.id).map { $0.bounds.minY > r2.bounds.minY } ?? false }
+    if let s3, let r3 = s3.obj(rectObj.id) {
+        let dx = r3.bounds.minX - r2.bounds.minX, dy = r3.bounds.minY - r2.bounds.minY
+        check(dx > 0 && dy > 0 && abs(dx - dy) < 0.01 && abs(r3.bounds.width - r2.bounds.width) < 0.01,
+              "→ then ↓ nudge the rectangle right and down by the same step (moved \(dx), \(dy))")
+        check(unchanged(s2, s3, except: [rectObj.id]), "nudge left every other object untouched")
+        front()
+        key(kZ, .maskCommand); key(kZ, .maskCommand)
+        check(waitFor(3) { state()?.obj(rectObj.id).map { near($0.bounds, r2.bounds, 0.01) } ?? false },
+              "⌘Z twice undoes both nudges exactly")
+    } else {
+        check(false, "arrow keys moved the selected rectangle (\(s3?.obj(rectObj.id)?.bounds ?? .null) vs \(r2.bounds))")
+    }
+
+    // Copy / paste.
+    guard let s4 = state() else { break tools }
+    if s4.selected != [rectObj.id] {
+        front(); click(CGPoint(x: s4.obj(rectObj.id)!.screen!.midX, y: s4.obj(rectObj.id)!.screen!.midY))
+    }
+    let s5 = state() ?? s4
+    front()
+    key(kC, .maskCommand)
+    key(kV, .maskCommand)
+    var s6: State?
+    _ = waitFor(3) { s6 = state(); return (s6?.objects.count ?? 0) > s5.objects.count }
+    let pasted = s6.map { s in s.objects.filter { s5.obj($0.id) == nil } } ?? []
+    check(pasted.count == 1, "⌘C ⌘V pastes exactly one new object (got \(pasted.count))")
+    if let p = pasted.first, let s6 {
+        let src = s5.obj(rectObj.id)!.bounds
+        check(abs(p.bounds.width - src.width) < 0.01 && abs(p.bounds.height - src.height) < 0.01,
+              "pasted copy has the rectangle's size (\(p.bounds.size) vs \(src.size))")
+        check(s6.selected == [p.id], "the pasted copy is selected")
+        check(unchanged(s5, s6, except: []), "paste left every existing object untouched")
+        front()
+        key(kZ, .maskCommand)
+        check(waitFor(3) { state().map { $0.obj(p.id) == nil && $0.objects.count == s5.objects.count } ?? false },
+              "⌘Z removes the pasted copy")
+    }
+
+    // Delete.
+    guard let s7 = state(), let rs = s7.obj(rectObj.id)?.screen else { break tools }
+    front()
+    click(CGPoint(x: rs.midX, y: rs.midY))
+    check(waitFor(3) { state()?.selected == [rectObj.id] }, "rectangle selected again before Delete")
+    let s8 = state() ?? s7
+    front()
+    key(kDelete)
+    check(waitFor(3) { state().map { $0.obj(rectObj.id) == nil && $0.objects.count == s8.objects.count - 1 } ?? false },
+          "Delete removes only the selected rectangle")
+    if let s9 = state() { check(unchanged(s8, s9, except: [rectObj.id]), "Delete left every other object untouched") }
+    front()
+    key(kZ, .maskCommand)
+    check(waitFor(3) { state()?.obj(rectObj.id).map { near($0.bounds, s8.obj(rectObj.id)!.bounds, 0.01) } ?? false },
+          "⌘Z brings the deleted rectangle back in place")
+}
+
 finish()
 
