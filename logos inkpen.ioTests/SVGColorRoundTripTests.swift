@@ -88,4 +88,52 @@ final class SVGColorRoundTripTests: XCTestCase {
         XCTAssertNil(parser.parseColor("color(rec2020 1 0 0)"), "unsupported color spaces fall back to the caller's default")
         XCTAssertNil(parser.parseColor("color(display-p3 1 x 0)"))
     }
+
+    private func sRGBComponents(_ cgColor: CGColor) -> [CGFloat] {
+        let extended = CGColorSpace(name: CGColorSpace.extendedSRGB)!
+        return Array((ColorManager.shared.convert(cgColor, to: extended).components ?? []).prefix(3))
+    }
+
+    private var nonRGBColors: [VectorColor] {
+        let mid = logos_inkpen_io.RGBColor(red: 0.4, green: 0.5, blue: 0.6)
+        return [
+            .cmyk(CMYKColor(cyan: 0, magenta: 0, yellow: 0, black: 1)),
+            .cmyk(CMYKColor(cyan: 0.2, magenta: 0.4, yellow: 0.6, black: 0.1)),
+            .cmyk(CMYKColor(cyan: 0, magenta: 1, yellow: 1, black: 0)),
+            .hsb(HSBColorModel(hue: 210, saturation: 0.6, brightness: 0.8)),
+            .hsb(HSBColorModel(hue: 120, saturation: 1, brightness: 1)),
+            .pantone(PantoneLibraryColor(pantone: "286-c", hex: "#0033A0")),
+            .spot(SPOTColor(number: "1", name: "Spot", rgbEquivalent: mid,
+                            cmykEquivalent: CMYKColor(cyan: 0.7, magenta: 0.3, yellow: 0, black: 0.3),
+                            hsbEquivalent: HSBColorModel.fromRGB(mid), alpha: 1)),
+            .appleSystem(AppleSystemColor(name: "systemGray3", lightMode: mid)),
+        ]
+    }
+
+    /// Every color model is written the way the canvas draws it, so reading the SVG back gives the same color.
+    func testNonRGBColorModelsReadBackAsTheColorTheCanvasDraws() {
+        let parser = SVGParser()
+        for color in nonRGBColors {
+            let written = color.svgColor
+            guard case .rgb(let read)? = parser.parseColor(written) else { XCTFail("\(written) not parsed"); continue }
+            let expected = sRGBComponents(color.cgColor)
+            let actual = sRGBComponents(read.cgColor)
+            XCTAssertEqual(expected.count, 3)
+            for (e, a) in zip(expected, actual) {
+                XCTAssertEqual(a, e, accuracy: 1.0 / 255.0, "\(color) written as \(written)")
+            }
+        }
+    }
+
+    /// Colors sRGB can show are written as the same hex in both export color space settings.
+    func testInGamutNonRGBColorsMatchSRGBExportHex() {
+        let inGamut = nonRGBColors.filter { !$0.svgColor.hasPrefix("color(") }
+        let p3Hex = inGamut.map(\.svgColor)
+        XCTAssertEqual(inGamut.count, 5, "\(p3Hex)")
+        AppState.shared.exportColorSpace = .sRGB
+        let srgbHex = inGamut.map(\.svgColor)
+        XCTAssertEqual(srgbHex, p3Hex)
+        XCTAssertEqual(VectorColor.cmyk(CMYKColor(cyan: 0, magenta: 0, yellow: 0, black: 1)).svgColor, "#000000",
+                       "CMYK black round-trips through hex")
+    }
 }

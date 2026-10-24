@@ -89,54 +89,31 @@ enum VectorColor: Hashable {
             }
         case .cmyk(let cmykColor):
             if useDisplayP3 {
-                let r = Int((1 - cmykColor.cyan) * (1 - cmykColor.black) * 255)
-                let g = Int((1 - cmykColor.magenta) * (1 - cmykColor.black) * 255)
-                let b = Int((1 - cmykColor.yellow) * (1 - cmykColor.black) * 255)
-                return String(format: "#%02X%02X%02X", r, g, b)
+                return Self.svgDisplayP3Color(cmykColor.rgbColor)
             } else {
                 return ColorManager.shared.cgColorToSRGBHex(cmykColor.rgbColor.cgColor)
             }
         case .hsb(let hsbColor):
             if useDisplayP3 {
-                let color = Color(hue: hsbColor.hue / 360.0, saturation: hsbColor.saturation, brightness: hsbColor.brightness)
-                let nsColor = PlatformColor(color)
-                if let p3Color = nsColor.usingColorSpace(.displayP3) {
-                    let r = Int(p3Color.redComponent * 255)
-                    let g = Int(p3Color.greenComponent * 255)
-                    let b = Int(p3Color.blueComponent * 255)
-                    return String(format: "#%02X%02X%02X", r, g, b)
-                }
-                return "#000000"
+                return Self.svgDisplayP3Color(hsbColor.rgbColor)
             } else {
                 return ColorManager.shared.cgColorToSRGBHex(hsbColor.rgbColor.cgColor)
             }
         case .pantone(let pantoneColor):
             if useDisplayP3 {
-                let rgb = pantoneColor.rgbEquivalent
-                let r = Int(rgb.red * 255)
-                let g = Int(rgb.green * 255)
-                let b = Int(rgb.blue * 255)
-                return String(format: "#%02X%02X%02X", r, g, b)
+                return Self.svgDisplayP3Color(pantoneColor.rgbEquivalent)
             } else {
                 return ColorManager.shared.cgColorToSRGBHex(pantoneColor.rgbEquivalent.cgColor)
             }
         case .spot(let spotColor):
             if useDisplayP3 {
-                let rgb = spotColor.rgbEquivalent
-                let r = Int(rgb.red * 255)
-                let g = Int(rgb.green * 255)
-                let b = Int(rgb.blue * 255)
-                return String(format: "#%02X%02X%02X", r, g, b)
+                return Self.svgDisplayP3Color(spotColor.rgbEquivalent)
             } else {
                 return ColorManager.shared.cgColorToSRGBHex(spotColor.rgbEquivalent.cgColor)
             }
         case .appleSystem(let systemColor):
             if useDisplayP3 {
-                let rgb = systemColor.rgbEquivalent
-                let r = Int(rgb.red * 255)
-                let g = Int(rgb.green * 255)
-                let b = Int(rgb.blue * 255)
-                return String(format: "#%02X%02X%02X", r, g, b)
+                return Self.svgDisplayP3Color(systemColor.rgbEquivalent)
             } else {
                 return ColorManager.shared.cgColorToSRGBHex(systemColor.rgbEquivalent.cgColor)
             }
