@@ -103,6 +103,25 @@ extension SVGParser {
             if components.count >= 4 {
                 return .rgb(convertSRGBToP3(red: components[0]/255.0, green: components[1]/255.0, blue: components[2]/255.0, alpha: components[3]))
             }
+        } else if color.hasPrefix("color(") && color.hasSuffix(")") {
+            let parts = color.dropFirst(6).dropLast().split(whereSeparator: { $0 == " " || $0 == "/" }).map(String.init)
+            guard parts.count >= 4 else { return nil }
+            let values = parts.dropFirst().compactMap { part -> Double? in
+                if part.hasSuffix("%"), let v = Double(part.dropLast()) { return v / 100.0 }
+                return Double(part)
+            }
+            guard values.count == parts.count - 1, values.count >= 3 else { return nil }
+            let source: CGColorSpace
+            switch parts[0].lowercased() {
+            case "display-p3": source = ColorManager.shared.displayP3CG
+            case "srgb": source = ColorManager.shared.sRGBCG
+            default: return nil
+            }
+            let alpha = values.count >= 4 ? max(0, min(1, values[3])) : 1.0
+            let comps: [CGFloat] = [CGFloat(values[0]), CGFloat(values[1]), CGFloat(values[2]), CGFloat(alpha)]
+            guard let sourceColor = CGColor(colorSpace: source, components: comps),
+                  let working = ColorManager.shared.toWorking(sourceColor).components, working.count >= 3 else { return nil }
+            return .rgb(RGBColor(red: Double(working[0]), green: Double(working[1]), blue: Double(working[2]), alpha: alpha))
         } else if color.hasPrefix("device-cmyk(") {
             let content = color.dropFirst(12).dropLast()
             let parts = content.split(whereSeparator: { $0 == "," || $0 == " " || $0 == "/" }).compactMap { part -> Double? in

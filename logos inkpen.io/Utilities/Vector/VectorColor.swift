@@ -83,10 +83,7 @@ enum VectorColor: Hashable {
             return "#FFFFFF"
         case .rgb(let rgbColor):
             if useDisplayP3 {
-                let r = Int(rgbColor.red * 255)
-                let g = Int(rgbColor.green * 255)
-                let b = Int(rgbColor.blue * 255)
-                return String(format: "#%02X%02X%02X", r, g, b)
+                return Self.svgDisplayP3Color(rgbColor)
             } else {
                 return ColorManager.shared.cgColorToSRGBHex(rgbColor.cgColor)
             }
@@ -146,6 +143,22 @@ enum VectorColor: Hashable {
         case .gradient(let gradient):
             return gradient.stops.first?.color.svgColor ?? "#000000"
         }
+    }
+
+    /// SVG hex is sRGB, so a working-space color inside the sRGB gamut is written as its sRGB hex;
+    /// a wide-gamut color that sRGB cannot hold is written as CSS `color(display-p3 r g b)`.
+    static func svgDisplayP3Color(_ rgbColor: RGBColor) -> String {
+        let cgColor = rgbColor.cgColor
+        let tolerance: CGFloat = 0.5 / 255.0
+        if let extendedSRGB = CGColorSpace(name: CGColorSpace.extendedSRGB),
+           let comps = ColorManager.shared.convert(cgColor, to: extendedSRGB).components, comps.count >= 3,
+           comps[0..<3].allSatisfy({ $0 >= -tolerance && $0 <= 1 + tolerance }) {
+            return ColorManager.shared.cgColorToSRGBHex(cgColor)
+        }
+        let p3 = ColorManager.shared.convert(cgColor, to: ColorManager.shared.displayP3CG).components ?? []
+        guard p3.count >= 3 else { return ColorManager.shared.cgColorToSRGBHex(cgColor) }
+        let clamped = p3[0..<3].map { min(1, max(0, Double($0))) }
+        return String(format: "color(display-p3 %.4f %.4f %.4f)", clamped[0], clamped[1], clamped[2])
     }
 
     private func hsbToRgb(h: Double, s: Double, b: Double) -> (r: Double, g: Double, b: Double) {
