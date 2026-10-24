@@ -18,12 +18,13 @@ extension SVGParser {
         return nsFont
     }
 
-    internal func calculateTextWidth(for text: String, font: PlatformFont, alignment: TextAlignment) -> CGFloat {
+    internal func calculateTextWidth(for text: String, font: PlatformFont, alignment: TextAlignment, letterSpacing: CGFloat = 0) -> CGFloat {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.alignment = alignment.nsTextAlignment
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .paragraphStyle: paragraphStyle
+            .paragraphStyle: paragraphStyle,
+            .kern: letterSpacing
         ]
         let attributedString = NSAttributedString(string: text, attributes: attributes)
         sharedTextStorage.setAttributedString(attributedString)
@@ -32,12 +33,12 @@ extension SVGParser {
         return ceil(boundingRect.width)
     }
 
-    internal func calculateMaxLineWidth(for text: String, font: PlatformFont, alignment: TextAlignment) -> CGFloat {
+    internal func calculateMaxLineWidth(for text: String, font: PlatformFont, alignment: TextAlignment, letterSpacing: CGFloat = 0) -> CGFloat {
         let lines = text.components(separatedBy: "\n")
 
         var maxWidth: CGFloat = 0
         for line in lines {
-            let lineWidth = calculateTextWidth(for: line, font: font, alignment: alignment)
+            let lineWidth = calculateTextWidth(for: line, font: font, alignment: alignment, letterSpacing: letterSpacing)
             maxWidth = max(maxWidth, lineWidth)
         }
         return maxWidth
@@ -109,6 +110,23 @@ extension SVGParser {
         return .left
     }
 
+    /// Text paint the SVG exporter writes: fill-opacity, stroke, stroke-width, stroke-opacity, letter-spacing.
+    func applyTextPaint(_ attributes: [String: String], to typography: inout TypographyProperties) {
+        if let fillOpacity = parseLength(attributes["fill-opacity"]) {
+            typography.fillOpacity = min(max(fillOpacity, 0), 1)
+        }
+        let strokeWidth = parseLength(attributes["stroke-width"]) ?? 1
+        if let stroke = attributes["stroke"], stroke.lowercased() != "none", let strokeColor = parseColor(stroke), strokeWidth > 0 {
+            typography.hasStroke = true
+            typography.strokeColor = strokeColor
+            typography.strokeWidth = strokeWidth
+            typography.strokeOpacity = min(max(parseLength(attributes["stroke-opacity"]) ?? 1, 0), 1)
+        }
+        if let letterSpacing = parseLength(attributes["letter-spacing"]) {
+            typography.letterSpacing = letterSpacing
+        }
+    }
+
     func parseText(attributes: [String: String]) {
         currentTextContent = ""
         currentTextSpans.removeAll()
@@ -135,6 +153,7 @@ extension SVGParser {
             var firstFontSize: Double = 12
             var firstFontFamily: String = "System Font"
             var firstFillColor: VectorColor = .black
+            var firstAttributes: [String: String] = currentTextAttributes
             for (index, span) in currentTextSpans.enumerated() {
                 let cleanContent = span.content.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !cleanContent.isEmpty else { continue }
@@ -144,6 +163,7 @@ extension SVGParser {
                     firstFontFamily = normalizeFontFamily(rawFontFamily)
                     let fill = span.attributes["fill"] ?? "black"
                     firstFillColor = parseColor(fill) ?? .black
+                    firstAttributes = span.attributes
                 }
                 combinedContent.append(cleanContent)
             }
@@ -151,7 +171,7 @@ extension SVGParser {
                 let multiLineContent = combinedContent.joined(separator: "\n")
                 let textAlignment = detectTextAlignment(from: currentTextSpans)
                 let lineHeight = firstFontSize * 1.2
-                let typography = TypographyProperties(
+                var typography = TypographyProperties(
                     fontFamily: firstFontFamily,
                     fontSize: firstFontSize,
                     lineHeight: lineHeight,
@@ -165,11 +185,12 @@ extension SVGParser {
                     fillColor: firstFillColor,
                     fillOpacity: 1.0
                 )
+                applyTextPaint(firstAttributes, to: &typography)
                 let textAnchor = currentTextAttributes["text-anchor"]?.lowercased() ??
                                  currentTextSpans.first?.attributes["text-anchor"]?.lowercased() ??
                                  "start"
                 let nsFont = getCachedFont(family: firstFontFamily, size: firstFontSize)
-                let maxLineWidth = calculateMaxLineWidth(for: multiLineContent, font: nsFont, alignment: textAlignment)
+                let maxLineWidth = calculateMaxLineWidth(for: multiLineContent, font: nsFont, alignment: textAlignment, letterSpacing: typography.letterSpacing)
                 let actualWidth: CGFloat
                 if let pendingRect = pendingTextBoxRect, pendingRect.width > 0 {
                     actualWidth = pendingRect.width
@@ -221,7 +242,7 @@ extension SVGParser {
             default: textAlignment = .left
             }
             let lineHeight = fontSize * 1.2
-            let typography = TypographyProperties(
+            var typography = TypographyProperties(
                 fontFamily: fontFamily,
                 fontSize: fontSize,
                 lineHeight: lineHeight,
@@ -235,9 +256,10 @@ extension SVGParser {
                 fillColor: parseColor(fill) ?? .black,
                 fillOpacity: 1.0
             )
+            applyTextPaint(currentTextAttributes, to: &typography)
             let trimmedContent = currentTextContent.trimmingCharacters(in: .whitespacesAndNewlines)
             let nsFont = getCachedFont(family: fontFamily, size: fontSize)
-            let textWidth = calculateTextWidth(for: trimmedContent, font: nsFont, alignment: textAlignment)
+            let textWidth = calculateTextWidth(for: trimmedContent, font: nsFont, alignment: textAlignment, letterSpacing: typography.letterSpacing)
             let actualWidth: CGFloat
             if let pendingRect = pendingTextBoxRect, pendingRect.width > 0 {
                 actualWidth = pendingRect.width
